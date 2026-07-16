@@ -1,0 +1,364 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0f0c29, #1a2980, #b21f1f);
+    padding: 40px 15px;
+    overflow-x: hidden;
+}
+
+/* =========================
+   LIQUID BLOBS
+========================= */
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    filter: blur(130px);
+    z-index: 0;
+    animation: float 12s infinite alternate ease-in-out;
+}
+
+body::before {
+    background: #1e3cfa;
+    top: -120px;
+    left: -120px;
+}
+
+body::after {
+    background: #ff1e56;
+    bottom: -120px;
+    right: -120px;
+}
+
+@keyframes float {
+    from { transform: translateY(0); }
+    to { transform: translateY(50px); }
+}
+
+/* =========================
+   FORM CONTAINER
+========================= */
+.form-container {
+    width: 100%;
+    max-width: 680px;
+    position: relative;
+    z-index: 1;
+}
+
+.glass-form {
+    backdrop-filter: blur(22px);
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 24px;
+    padding: 50px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.12);
+}
+
+.glass-form h2 {
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 30px;
+}
+
+/* =========================
+   FORM GRID
+========================= */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: span 2;
+}
+
+/* =========================
+   INPUT GROUP
+========================= */
+.input-group {
+    position: relative;
+}
+
+.input-group i {
+    position: absolute;
+    left: 12px;
+    top: 14px;
+    color: rgba(255,255,255,0.7);
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 12px 12px 12px 38px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    outline: none;
+    color: #ffffff;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+/* Dropdown options */
+.input-group select option {
+    background: #1a2980;
+    color: #ffffff;
+}
+
+/* Floating Label */
+.input-group label {
+    position: absolute;
+    left: 38px;
+    top: 13px;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    transition: 0.3s ease;
+    pointer-events: none;
+}
+
+/* Focus Effect */
+.input-group input:focus,
+.input-group select:focus {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid #1e3cfa;
+    box-shadow: 0 0 12px rgba(30, 60, 250, 0.6);
+    transform: scale(1.02);
+}
+/* Make Email Field Slightly Bigger */
+.email-group input {
+    padding: 16px 16px 16px 42px;
+    font-size: 15px;
+}
+
+/* Make Username Field Slightly Bigger */
+.username-group input {
+    padding: 16px 16px 16px 42px;
+    font-size: 15px;
+}
+
+/* Floating Animation */
+.input-group input:focus + label,
+.input-group input:valid + label,
+.input-group select:focus + label,
+.input-group select:valid + label {
+    top: -10px;
+    left: 32px;
+    font-size: 11px;
+    color: #ff1e56;
+}
+
+/* Password Toggle Styling */
+.password-group {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.7);
+    transition: 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: #ff1e56;
+}
+
+/* Smooth icon transition */
+.toggle-password i {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.permissions-group {
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 14px;
+    padding: 16px;
+    color: #fff;
+    background: rgba(255,255,255,0.06);
+}
+
+.permissions-group legend {
+    padding: 0 8px;
+    color: rgba(255,255,255,0.78);
+    font-size: 13px;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.permission-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 13px;
+}
+
+.permission-option span {
+    display: grid;
+    gap: 2px;
+}
+
+.permission-option small {
+    color: rgba(255,255,255,0.62);
+    font-size: 11px;
+}
+
+.permission-option input {
+    width: 16px;
+    height: 16px;
+    accent-color: #ff1e56;
+}
+
+/* =========================
+   BUTTON
+========================= */
+/* Remove full width */
+.submit-btn {
+    width: auto;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3cfa, #ff1e56);
+    color: #fff;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+/* Right align inside grid */
+.btn-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.submit-btn:hover {
+    transform: scale(2.5);
+    box-shadow: 0 0 20px rgba(255, 30, 86, 0.7);
+}
+
+.submit-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 30, 86, 0.7);
+}
+
+.submit-btn:active {
+    transform: scale(0.96);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .full-width {
+        grid-column: span 1;
+    }
+
+    .permissions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================
+   BACK BUTTON
+========================= */
+
+.back-admin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 45px;
+    height: 45px;
+
+    border-radius: 50%;
+    text-decoration: none;
+
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+
+    backdrop-filter: blur(10px);
+
+    transition: all 0.3s ease;
+
+    /* Glowing Animation */
+    animation: glowPulse 2s infinite alternate;
+}
+
+.back-admin-btn:hover {
+    transform: scale(1.15);
+    color: #fff;
+}
+
+/* Glow Animation */
+@keyframes glowPulse {
+    0% {
+        box-shadow:
+            0 0 5px rgba(30, 60, 250, 0.5),
+            0 0 10px rgba(30, 60, 250, 0.4),
+            0 0 15px rgba(30, 60, 250, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 10px rgba(255, 30, 86, 0.7),
+            0 0 20px rgba(255, 30, 86, 0.6),
+            0 0 35px rgba(255, 30, 86, 0.5);
+    }
+
+    100% {
+        box-shadow:
+            0 0 15px rgba(30, 60, 250, 0.8),
+            0 0 30px rgba(30, 60, 250, 0.7),
+            0 0 45px rgba(30, 60, 250, 0.6);
+    }
+}
+
+.back-admin-btn i {
+    font-size: 18px;
+    animation: arrowGlow 2s infinite alternate;
+}
+
+@keyframes arrowGlow {
+    from {
+        text-shadow: 0 0 5px #1e3cfa;
+    }
+    to {
+        text-shadow:
+            0 0 10px #ff1e56,
+            0 0 20px #ff1e56,
+            0 0 30px #ff1e56;
+    }
+}

@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medicine Sales</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/medicine_sales.css') }}?v=6">
+
+</head>
+<body data-cart-column-count="{{ 7 if admin else 6 }}">
+<aside class="sidebar">
+	<div class="brand">
+		<a href="{{ url_for('dashboard') }}" class="brand-link">
+			<img src="{{ url_for('assets', filename='logo.png') }}" alt="AJH Logo" class="brand-logo">
+			<span class="brand-text">AJH</span>
+		</a>
+	</div>
+
+	<ul class="nav-list">
+		{% if can_access_page('dashboard') %}
+		<li><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+		{% endif %}
+		<li class="medicine-menu open" id="medicineMenu">
+			<button class="medicine-toggle" type="button" id="medicineToggle" aria-expanded="true">
+				<i class="fas fa-pills"></i>
+				<span>Medicine</span>
+				<i class="fas fa-chevron-down dropdown-icon"></i>
+			</button>
+			<div class="sub-nav">
+				{% if admin %}
+				<a class="sub-link" href="{{ url_for('medicine_stock_dashboard') }}"><i class="fas fa-boxes-stacked"></i> Stock</a>
+				{% endif %}
+				{% if can_access_page('medicine_sales') %}
+				<a class="sub-link active" href="{{ url_for('medicine_sales') }}"><i class="fas fa-cash-register"></i> Sales</a>
+				{% endif %}
+				{% if can_access_page('medicine_sales_list') %}
+				<a class="sub-link" href="{{ url_for('medicine_sales_list') }}"><i class="fas fa-calendar-days"></i> Sales List</a>
+				{% endif %}
+				{% if can_access_page('medicine_monthly_report') or can_access_page('medicine_sales') or can_access_page('medicine_sales_list') %}
+				<a class="sub-link" href="{{ url_for('medicine_monthly_report') }}"><i class="fas fa-chart-column"></i> Monthly Report</a>
+				{% endif %}
+				{% if can_access_page('medicine_return') or can_access_page('medicine_sales') or can_access_page('medicine_sales_list') %}
+				<a class="sub-link" href="{{ url_for('medicine_return') }}"><i class="fas fa-rotate-left"></i> Medi Return</a>
+				{% endif %}
+			</div>
+		</li>
+
+	</ul>
+</aside>
+
+<main class="content">
+	<header class="top-header">
+		<div class="title-group">
+			
+			<h1>Sales</h1>
+			
+		</div>
+
+		<div class="profile">
+			<button class="admin-btn" id="adminBtn" type="button">
+				<i class="fas fa-user-circle"></i>
+				{{ profile_name }}
+				<i class="fas fa-chevron-down chevron"></i>
+			</button>
+			<div class="admin-dropdown" id="adminDropdown">
+				<a href="{{ url_for('dashboard') }}"><i class="fas fa-house"></i> Dashboard</a>
+				<a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+			</div>
+		</div>
+	</header>
+
+	<form class="toolbar" method="GET" action="{{ url_for('medicine_sales') }}">
+		<div class="field">
+			<label for="productSearch">Add Medicine to Cart</label>
+			<input class="input" id="productSearch" name="q" type="search" placeholder="Search medicine name or batch number" value="{{ search_query }}">
+		</div>
+		<div class="field">
+			<label for="customer">Registered Customer</label>
+			<select class="select" id="customer" name="customer">
+				<option value="" data-name="" data-phone="" data-address="">Walk-in Customer</option>
+				{% for patient in customers %}
+				<option value="{{ patient.name }}" data-name="{{ patient.name }}" data-phone="{{ patient.phone }}" data-address="{{ patient.address }}"{% if selected_customer == patient.name %} selected{% endif %}>{{ patient.name }} - {{ patient.phone }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="field">
+			<label for="customerName">Customer Name</label>
+			<input class="input" id="customerName" name="customer_name" type="text" value="{{ customer_name_value }}" placeholder="Customer name">
+		</div>
+		<div class="field">
+			<label for="customerPhone">Phone Number</label>
+			<input class="input" id="customerPhone" name="customer_phone" type="tel" value="{{ customer_phone_value }}" placeholder="Phone number" maxlength="11" pattern="[0-9]{0,11}" inputmode="numeric" autocomplete="tel">
+		</div>
+		<div class="field customer-address-field">
+			<label for="customerAddress">Address</label>
+			<input class="input" id="customerAddress" name="customer_address" type="text" value="{{ customer_address_value }}" placeholder="Customer address">
+		</div>
+		<button class="search-btn" type="submit"><i class="fas fa-magnifying-glass-plus"></i> Find Medicine</button>
+	</form>
+
+	<section class="sales-grid">
+		<div class="quick-strip">
+			<div class="quick-card">
+				<span>Invoice</span>
+				<strong>{{ invoice_no }}</strong>
+			</div>
+			<div class="quick-card">
+				<span>Date</span>
+				<strong>{{ format_date_display(today) }}</strong>
+			</div>
+			<div class="quick-card">
+				<span>Counter</span>
+				<strong>POS-01</strong>
+			</div>
+		</div>
+
+		<section class="panel cart-panel">
+			<div class="panel-header">
+				<div>
+					<p class="panel-kicker">Current Invoice</p>
+					<h3>Medicine Sales Cart</h3>
+				</div>
+				<span class="status-pill"><i class="fas fa-circle-check"></i> <span id="cartCount">0</span> selected / {{ cart_items|length }} medicines</span>
+			</div>
+
+			<div class="cart-search-bar">
+				<div class="cart-search-field">
+					<i class="fas fa-magnifying-glass"></i>
+					<input id="cartMedicineSearch" type="search" placeholder="Type medicine name or batch number" value="{{ search_query }}" autocomplete="off">
+				</div>
+				<button class="cart-clear-search{% if not search_query %} is-hidden{% endif %}" id="clearCartSearch" type="button">
+					<i class="fas fa-xmark"></i>
+					Clear
+				</button>
+			</div>
+
+			<div class="table-wrap">
+				<table id="cartTable">
+					<thead>
+						<tr>
+							<th>Medicine</th>
+							<th>Stock</th>
+							<th>Qty</th>
+							<th>Unit Price</th>
+							<th>Discount</th>
+							<th>Line Total</th>
+							{% if admin %}
+							<th>Action</th>
+							{% endif %}
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in cart_items %}
+						<tr class="cart-row" data-product="{{ item.product }}" data-batch="{{ item.batch }}" data-unit="{{ item.unit|lower }}" data-available="{{ item.available }}" data-price="{{ '%.2f'|format(item.price) }}">
+							<td>
+								<span class="product-name"><i class="fas fa-capsules"></i>{{ item.product }}</span>
+								<span class="product-meta">Pharmacy sale item</span>
+							</td>
+							<td>
+								<span class="stock-pill {% if item.available <= 0 %}out{% elif item.available <= 10 %}low{% endif %}">
+									<i class="fas fa-boxes-stacked"></i>
+									{{ item.available }} left
+								</span>
+							</td>
+							<td>
+								<div class="qty-control">
+									<button class="qty-minus" type="button" aria-label="Decrease quantity">-</button>
+									<input class="qty-input" type="number" min="0" value="{{ item.qty }}">
+									<button class="qty-plus" type="button" aria-label="Increase quantity">+</button>
+								</div>
+							</td>
+							<td class="money">Tk {{ '%.2f'|format(item.price) }}</td>
+							<td><input class="line-discount" type="number" min="0" step="0.01" value="{{ '%.2f'|format(item.discount) }}"></td>
+							<td class="row-total">Tk {{ '%.2f'|format(item.total) }}</td>
+							{% if admin %}
+							<td>
+								<div class="row-actions">
+									<button class="add-line-btn" type="button" aria-label="Add medicine quantity"><i class="fas fa-plus"></i> Add</button>
+									<button class="remove-btn" type="button" aria-label="Remove item"><i class="fas fa-trash"></i></button>
+								</div>
+							</td>
+							{% endif %}
+						</tr>
+						{% else %}
+						<tr class="empty-row">
+							<td colspan="{{ 7 if admin else 6 }}">
+								<div class="cart-empty-message">
+									<i class="fas fa-magnifying-glass-plus"></i>
+									<span>No medicines in cart. Search by medicine name or batch number to start a sale.</span>
+								</div>
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<aside class="panel summary-panel">
+			<div class="panel-header">
+				<div>
+					<p class="panel-kicker">Payment</p>
+					<h3>Sale Summary</h3>
+				</div>
+				<span class="status-pill"><i class="fas fa-receipt"></i> Ready</span>
+			</div>
+
+			<div class="selected-items-panel">
+				<div class="selected-items-head">
+					<strong>Selected Medicines</strong>
+					<span id="selectedItemQuantity">0 qty</span>
+				</div>
+				<div class="selected-items-list" id="selectedItemsList">
+					<div class="selected-empty">No medicines selected.</div>
+				</div>
+			</div>
+
+			<div class="summary-form">
+				<div class="summary-field receive-field">
+					<label for="receiveAmount">Receive Amount</label>
+					<input class="summary-input" id="receiveAmount" type="number" min="0" step="0.01" placeholder="0 = full credit / due sale">
+				</div>
+
+				<div class="summary-field total-field">
+					<label for="grandTotal">Total</label>
+					<input class="summary-input total" id="grandTotal" type="text" value="Tk 0.00" readonly>
+				</div>
+
+				<div class="summary-field change-field">
+					<label for="changeAmount">Change Amount</label>
+					<input class="summary-input" id="changeAmount" type="text" placeholder="Change" readonly>
+				</div>
+
+				<div class="summary-field full tax-field">
+					<label for="taxType">Tax</label>
+					<div class="split-input">
+						<select class="summary-select" id="taxType">
+							<option value="none" selected>No Tax</option>
+							<option value="flat">Flat Tk</option>
+							<option value="percent">Percent %</option>
+						</select>
+						<input class="summary-input" id="taxValue" type="number" min="0" step="0.01" placeholder="Tax value">
+					</div>
+				</div>
+
+				<div class="summary-field due-field">
+					<label for="dueAmount">Due Amount</label>
+					<input class="summary-input" id="dueAmount" type="text" placeholder="Due" readonly>
+				</div>
+
+				<div class="summary-field full discount-field">
+					<label for="discountType">Discount</label>
+					<div class="split-input">
+						<select class="summary-select" id="discountType">
+							<option value="flat" selected>Flat Tk</option>
+							<option value="percent">Percent %</option>
+						</select>
+						<input class="summary-input" id="discountValue" type="number" min="0" step="0.01" placeholder="Discount value">
+					</div>
+				</div>
+
+				<div class="summary-field payment-field">
+					<label for="paymentType">Payment Method</label>
+					<select class="summary-select" id="paymentType">
+						<option>Cash</option>
+						<option>Card</option>
+						<option>Mobile Banking</option>
+						<option>Due</option>
+					</select>
+				</div>
+
+				<div class="summary-field delivery-field">
+					<label for="deliveryCost">Delivery Cost</label>
+					<input class="summary-input" id="deliveryCost" type="number" min="0" step="0.01" placeholder="Delivery cost">
+				</div>
+
+				<div class="summary-actions">
+					<button class="summary-btn reset-btn" id="resetSale" type="button">Reset</button>
+					<button class="summary-btn save-btn" id="saveSale" type="button"><i class="fas fa-floppy-disk"></i> Save</button>
+					<button class="summary-btn print-btn" id="savePrint" type="button"><i class="fas fa-print"></i> Save &amp; Print</button>
+				</div>
+
+				<p class="save-note" id="saleStatus"></p>
+			</div>
+		</aside>
+	</section>
+</main>
+
+<script>
+const medicineToggle = document.getElementById('medicineToggle');
+const medicineMenu = document.getElementById('medicineMenu');
+const adminBtn = document.getElementById('adminBtn');
+const adminDropdown = document.getElementById('adminDropdown');
+const chevron = document.querySelector('.chevron');
+
+if (medicineToggle && medicineMenu) {
+	medicineToggle.addEventListener('click', function () {
+		medicineMenu.classList.toggle('open');
+		medicineToggle.setAttribute('aria-expanded', medicineMenu.classList.contains('open'));
+	});
+}
+
+if (adminBtn && adminDropdown && chevron) {
+	adminBtn.addEventListener('click', function () {
+		adminDropdown.classList.toggle('show');
+		chevron.classList.toggle('rotate');
+	});
+
+	window.addEventListener('click', function (event) {
+		if (!document.querySelector('.profile').contains(event.target)) {
+			adminDropdown.classList.remove('show');
+			chevron.classList.remove('rotate');
+		}
+	});
+}
+
+const cartTable = document.getElementById('cartTable');
+const cartCount = document.getElementById('cartCount');
+const grandTotalInput = document.getElementById('grandTotal');
+const receiveAmount = document.getElementById('receiveAmount');
+const changeAmount = document.getElementById('changeAmount');
+const dueAmount = document.getElementById('dueAmount');
+const taxType = document.getElementById('taxType');
+const taxValue = document.getElementById('taxValue');
+const discountType = document.getElementById('discountType');
+const discountValue = document.getElementById('discountValue');
+const deliveryCost = document.getElementById('deliveryCost');
+const saleStatus = document.getElementById('saleStatus');
+const customerSelect = document.getElementById('customer');
+const customerNameInput = document.getElementById('customerName');
+const customerPhoneInput = document.getElementById('customerPhone');
+const customerAddressInput = document.getElementById('customerAddress');
+const paymentType = document.getElementById('paymentType');
+const saveButton = document.getElementById('saveSale');
+const savePrintButton = document.getElementById('savePrint');
+const cartMedicineSearch = document.getElementById('cartMedicineSearch');
+const clearCartSearch = document.getElementById('clearCartSearch');
+const selectedItemsList = document.getElementById('selectedItemsList');
+const selectedItemQuantity = document.getElementById('selectedItemQuantity');
+const cartColumnCount = Number(document.body.dataset.cartColumnCount || 7);
+
+function money(value) {
+	return 'Tk ' + Number(value || 0).toFixed(2);
+}
+
+function optionalAmount(value) {
+	const amount = Number(value || 0);
+	return amount > 0 ? amount.toFixed(2) : '';
+}
+
+function numericValue(input) {
+	return Math.max(parseFloat(input.value) || 0, 0);
+}
+
+function escapeHtml(value) {
+	return String(value || '').replace(/[&<>"']/g, function (character) {
+		return {
+			'&': '&amp;',
+			'<': '&lt;',
+			'>': '&gt;',
+			'"': '&quot;',
+			"'": '&#39;',
+		}[character];
+	});
+}
+
+function titleCase(value) {
+	const text = String(value || '');
+	return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+}
+
+function getRows() {
+	return Array.from(document.querySelectorAll('.cart-row'));
+}
+
+function emptyCartRowHtml() {
+	return `
+		<tr class="empty-row">
+			<td colspan="${cartColumnCount}">
+				<div class="cart-empty-message">
+					<i class="fas fa-magnifying-glass-plus"></i>
+					<span>No medicines in cart. Search by medicine name or batch number to start a sale.</span>
+				</div>
+			</td>
+		</tr>
+	`;
+}
+
+function showEmptyCartIfNeeded() {
+	const tbody = cartTable ? cartTable.querySelector('tbody') : null;
+	if (!tbody) return;
+	if (!getRows().length && !tbody.querySelector('.empty-row')) {
+		tbody.insertAdjacentHTML('beforeend', emptyCartRowHtml());
+	}
+}
+
+function filterCartRows() {
+	const query = (cartMedicineSearch ? cartMedicineSearch.value : '').trim().toLowerCase();
+	let visibleRows = 0;
+	const tbody = cartTable ? cartTable.querySelector('tbody') : null;
+	if (!tbody) return;
+
+	getRows().forEach(function (row) {
+		const haystack = [
+			row.dataset.product || '',
+			row.dataset.batch || '',
+			row.dataset.unit || '',
+		].join(' ').toLowerCase();
+		const isMatch = !query || haystack.includes(query);
+		row.hidden = !isMatch;
+		if (isMatch) visibleRows += 1;
+	});
+
+	let noMatchRow = tbody.querySelector('.no-match-row');
+	if (query && visibleRows === 0) {
+		if (!noMatchRow) {
+			tbody.insertAdjacentHTML('beforeend', `
+				<tr class="no-match-row">
+					<td colspan="${cartColumnCount}">
+						<div class="cart-empty-message">
+							<i class="fas fa-magnifying-glass"></i>
+							<span>No matching medicine found. Try another name or batch number.</span>
+						</div>
+					</td>
+				</tr>
+			`);
+		}
+	} else if (noMatchRow) {
+		noMatchRow.remove();
+	}
+
+	if (clearCartSearch) {
+		clearCartSearch.classList.toggle('is-hidden', !query);
+	}
+}
+
+function resetSaleState(options) {
+	const settings = options || {};
+	if (settings.clearCart && cartTable) {
+		getRows().forEach(function (row) {
+			row.remove();
+		});
+		showEmptyCartIfNeeded();
+	} else {
+		getRows().forEach(function (row) {
+			row.querySelector('.qty-input').value = '0';
+			row.querySelector('.line-discount').value = '0.00';
+		});
+	}
+
+	if (receiveAmount) receiveAmount.value = '';
+	changeAmount.value = '';
+	dueAmount.value = '';
+	taxType.value = 'none';
+	taxValue.value = '';
+	discountType.value = 'flat';
+	discountValue.value = '';
+	deliveryCost.value = '';
+	if (paymentType) paymentType.value = 'Cash';
+	if (customerSelect) customerSelect.value = '';
+	if (customerNameInput) customerNameInput.value = '';
+	if (customerPhoneInput) customerPhoneInput.value = '';
+	if (customerAddressInput) customerAddressInput.value = '';
+	saleStatus.textContent = settings.message || '';
+	updateSummary();
+}
+
+function renderSelectedItems(items) {
+	if (!selectedItemsList) return;
+
+	if (!items.length) {
+		selectedItemsList.innerHTML = '<div class="selected-empty">No medicines selected.</div>';
+		if (selectedItemQuantity) selectedItemQuantity.textContent = '0 qty';
+		return;
+	}
+
+	const totalQuantity = items.reduce(function (sum, item) {
+		return sum + item.quantity;
+	}, 0);
+
+	selectedItemsList.innerHTML = items.map(function (item) {
+		return `
+			<div class="selected-item">
+				<div>
+					<strong>${escapeHtml(item.product)}</strong>
+					<span>${escapeHtml(item.batch)} | ${escapeHtml(titleCase(item.unit))} | Qty ${item.quantity}</span>
+				</div>
+				<b>${money(item.total)}</b>
+			</div>
+		`;
+	}).join('');
+
+	if (selectedItemQuantity) {
+		selectedItemQuantity.textContent = totalQuantity + ' qty';
+	}
+}
+
+function updateSummary() {
+	let subtotal = 0;
+	const rows = getRows();
+	let activeRows = 0;
+	const selectedItems = [];
+
+	rows.forEach(function (row) {
+		const price = parseFloat(row.dataset.price) || 0;
+		const qtyInput = row.querySelector('.qty-input');
+		const discountInput = row.querySelector('.line-discount');
+		const rowTotal = row.querySelector('.row-total');
+		const available = Math.max(parseInt(row.dataset.available, 10) || 0, 0);
+		const qty = Math.min(Math.max(parseInt(qtyInput.value, 10) || 0, 0), available);
+		const lineDiscount = numericValue(discountInput);
+		const total = Math.max((price * qty) - lineDiscount, 0);
+
+		qtyInput.value = qty;
+		rowTotal.textContent = money(total);
+		subtotal += total;
+		if (qty > 0) {
+			activeRows += 1;
+			selectedItems.push({
+				product: row.dataset.product || '',
+				batch: row.dataset.batch || 'General',
+				unit: row.dataset.unit || '',
+				quantity: qty,
+				total: total,
+			});
+		}
+	});
+
+	const orderDiscountValue = numericValue(discountValue);
+	const orderDiscount = discountType.value === 'percent' ? subtotal * (orderDiscountValue / 100) : orderDiscountValue;
+	const afterDiscount = Math.max(subtotal - orderDiscount, 0);
+	const currentTaxValue = numericValue(taxValue);
+	const taxAmount = taxType.value === 'percent' ? afterDiscount * (currentTaxValue / 100) : (taxType.value === 'flat' ? currentTaxValue : 0);
+	const total = afterDiscount + taxAmount + numericValue(deliveryCost);
+	const received = numericValue(receiveAmount);
+	const due = received > 0 ? Math.max(total - received, 0) : total;
+	const change = received > total ? received - total : 0;
+
+	grandTotalInput.value = money(total);
+	dueAmount.value = optionalAmount(due);
+	changeAmount.value = optionalAmount(change);
+	cartCount.textContent = activeRows;
+	renderSelectedItems(selectedItems);
+}
+
+function collectCustomer() {
+	const selectedOption = customerSelect && customerSelect.selectedOptions ? customerSelect.selectedOptions[0] : null;
+	const selectedName = selectedOption ? (selectedOption.dataset.name || '').trim() : '';
+	const selectedPhone = selectedOption ? (selectedOption.dataset.phone || '').trim() : '';
+	const selectedAddress = selectedOption ? (selectedOption.dataset.address || '').trim() : '';
+	const typedName = customerNameInput ? customerNameInput.value.trim() : '';
+	const typedPhone = customerPhoneInput ? customerPhoneInput.value.trim() : '';
+	const typedAddress = customerAddressInput ? customerAddressInput.value.trim() : '';
+
+	return {
+		name: typedName || selectedName || 'Walk-in Customer',
+		phone: typedPhone || selectedPhone,
+		address: typedAddress || selectedAddress,
+	};
+}
+
+function applyCustomerSelection() {
+	if (!customerSelect) return;
+	const selectedOption = customerSelect.selectedOptions && customerSelect.selectedOptions[0];
+	if (!selectedOption) return;
+
+	if (customerNameInput) {
+		customerNameInput.value = selectedOption.dataset.name || '';
+	}
+	if (customerPhoneInput) {
+		customerPhoneInput.value = (selectedOption.dataset.phone || '').replace(/\D/g, '').slice(0, 11);
+	}
+	if (customerAddressInput) {
+		customerAddressInput.value = selectedOption.dataset.address || '';
+	}
+}
+
+function collectSalePayload() {
+	const items = getRows().map(function (row) {
+		const qty = Math.max(parseInt(row.querySelector('.qty-input').value, 10) || 0, 0);
+		return {
+			product: row.dataset.product,
+			batch: row.dataset.batch,
+			unit: row.dataset.unit,
+			quantity: qty,
+			price: parseFloat(row.dataset.price) || 0,
+			discount: numericValue(row.querySelector('.line-discount')),
+		};
+	}).filter(function (item) {
+		return item.quantity > 0;
+	});
+	const customer = collectCustomer();
+
+	return {
+		customerName: customer.name,
+		customerPhone: customer.phone,
+		customerAddress: customer.address,
+		items: items,
+		receivedAmount: numericValue(receiveAmount),
+		taxType: taxType.value,
+		taxValue: numericValue(taxValue),
+		discountType: discountType.value,
+		discountValue: numericValue(discountValue),
+		deliveryCost: numericValue(deliveryCost),
+		paymentType: paymentType ? paymentType.value : 'Cash',
+	};
+}
+
+function displayDateTime(value) {
+	if (!value) return '-';
+	const normalized = String(value).replace(' ', 'T');
+	const parsed = new Date(normalized);
+	if (Number.isNaN(parsed.getTime())) return value;
+	const includesTime = String(value).includes(' ') || String(value).includes('T');
+
+	const dateText = parsed.toLocaleDateString('en-GB', {
+		day: '2-digit',
+		month: 'long',
+		year: 'numeric',
+	});
+	if (!includesTime) {
+		return dateText;
+	}
+	return dateText + ' ' + parsed.toLocaleTimeString('en-US', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: true,
+	});
+}
+
+function receiptHtml(sale) {
+	const itemRows = sale.items.map(function (item, index) {
+		return `
+			<tr>
+				<td>${index + 1}</td>
+				<td>
+					<strong>${item.medicine_name}</strong>
+					<span>Batch ${item.batch_no} | ${item.unit_type}</span>
+				</td>
+				<td>${item.quantity}</td>
+				<td>Tk ${Number(item.unit_price).toFixed(2)}</td>
+				<td>Tk ${Number(item.discount).toFixed(2)}</td>
+				<td>Tk ${Number(item.line_total).toFixed(2)}</td>
+			</tr>
+		`;
+	}).join('');
+
+	return `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>${sale.invoice_no}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/medicine_sales.css') }}?v=6">
+	</head>
+	<body class="receipt-print-page">
+		<div class="receipt">
+			<div class="header">
+				<div class="brand">
+					<h1>AL-JUMIRA HOSPITAL</h1>
+					<p>Pharmacy Sales Receipt</p>
+					<p>Patient Management System</p>
+				</div>
+				<div class="meta">
+					<strong>${sale.invoice_no}</strong>
+					<p>Date: ${displayDateTime(sale.sale_date)}</p>
+					<p>Created: ${displayDateTime(sale.created_at)}</p>
+					<p>Payment: ${sale.payment_type}</p>
+				</div>
+			</div>
+			<div class="customer">
+				<div>
+					<p><strong>Registered Customer</strong></p>
+					<p>${sale.customer_name}</p>
+				</div>
+				<div>
+					<p><strong>Phone</strong></p>
+					<p>${sale.customer_phone || 'N/A'}</p>
+				</div>
+				<div>
+					<p><strong>Customer Address</strong></p>
+					<p>${sale.customer_address || 'N/A'}</p>
+				</div>
+			</div>
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Medicine</th>
+						<th>Qty</th>
+						<th>Price</th>
+						<th>Discount</th>
+						<th>Total</th>
+					</tr>
+				</thead>
+				<tbody>${itemRows}</tbody>
+			</table>
+			<div class="totals">
+				<div><span>Subtotal</span><strong>Tk ${Number(sale.subtotal).toFixed(2)}</strong></div>
+				<div><span>Discount</span><strong>Tk ${Number(sale.discount_amount).toFixed(2)}</strong></div>
+				<div><span>Tax</span><strong>Tk ${Number(sale.tax_amount).toFixed(2)}</strong></div>
+				<div><span>Delivery</span><strong>Tk ${Number(sale.delivery_cost).toFixed(2)}</strong></div>
+				<div class="grand"><span>Grand Total</span><strong>Tk ${Number(sale.grand_total).toFixed(2)}</strong></div>
+				<div><span>Received</span><strong>Tk ${Number(sale.received_amount).toFixed(2)}</strong></div>
+				<div><span>Due</span><strong>Tk ${Number(sale.due_amount).toFixed(2)}</strong></div>
+				<div><span>Change</span><strong>Tk ${Number(sale.change_amount).toFixed(2)}</strong></div>
+			</div>
+			<div class="footer">Thank you. Please keep this receipt for pharmacy records.</div>
+		</div>
+	</body>
+	</html>`;
+}
+
+function printReceipt(sale) {
+	const printWindow = window.open('', '_blank', 'width=900,height=720');
+	if (!printWindow) {
+		saleStatus.textContent = 'Sale saved. Please allow pop-ups to print the receipt.';
+		return false;
+	}
+	printWindow.document.open();
+	printWindow.document.write(receiptHtml(sale));
+	printWindow.document.close();
+	printWindow.focus();
+	setTimeout(function () {
+		printWindow.print();
+	}, 350);
+	return true;
+}
+
+function reloadForNextSale() {
+	setTimeout(function () {
+		window.location.href = '{{ url_for("medicine_sales") }}';
+	}, 900);
+}
+
+if (cartTable) {
+	cartTable.addEventListener('click', function (event) {
+		const button = event.target.closest('button');
+		if (!button) return;
+
+		const row = button.closest('.cart-row');
+		if (!row) return;
+
+		const qtyInput = row.querySelector('.qty-input');
+		if (button.classList.contains('qty-plus')) {
+			const available = Math.max(parseInt(row.dataset.available, 10) || 0, 0);
+			qtyInput.value = Math.min((parseInt(qtyInput.value, 10) || 0) + 1, available);
+		}
+
+		if (button.classList.contains('add-line-btn')) {
+			const available = Math.max(parseInt(row.dataset.available, 10) || 0, 0);
+			qtyInput.value = Math.min((parseInt(qtyInput.value, 10) || 0) + 1, available);
+		}
+
+		if (button.classList.contains('qty-minus')) {
+			qtyInput.value = Math.max((parseInt(qtyInput.value, 10) || 0) - 1, 0);
+		}
+
+		if (button.classList.contains('remove-btn')) {
+			row.remove();
+			showEmptyCartIfNeeded();
+		}
+
+		updateSummary();
+	});
+
+	cartTable.addEventListener('input', updateSummary);
+}
+
+if (cartMedicineSearch) {
+	cartMedicineSearch.addEventListener('input', filterCartRows);
+}
+
+if (clearCartSearch && cartMedicineSearch) {
+	clearCartSearch.addEventListener('click', function () {
+		cartMedicineSearch.value = '';
+		filterCartRows();
+		cartMedicineSearch.focus();
+	});
+}
+
+if (customerSelect) {
+	customerSelect.addEventListener('change', applyCustomerSelection);
+}
+
+if (customerPhoneInput) {
+	customerPhoneInput.addEventListener('input', function () {
+		customerPhoneInput.value = customerPhoneInput.value.replace(/\D/g, '').slice(0, 11);
+	});
+}
+
+[receiveAmount, taxType, taxValue, discountType, discountValue, deliveryCost].forEach(function (control) {
+	if (control) {
+		control.addEventListener('input', updateSummary);
+		control.addEventListener('change', updateSummary);
+	}
+});
+
+document.getElementById('resetSale').addEventListener('click', function () {
+	resetSaleState();
+});
+
+async function saveSale(printAfterSave) {
+	const payload = collectSalePayload();
+	if (!payload.items.length) {
+		saleStatus.textContent = 'Please set quantity above 0 for at least one medicine.';
+		return;
+	}
+
+	if (saveButton) saveButton.disabled = true;
+	if (savePrintButton) savePrintButton.disabled = true;
+	saleStatus.textContent = printAfterSave ? 'Saving sale and preparing receipt...' : 'Saving sale summary...';
+
+	try {
+		const response = await fetch('{{ url_for("save_medicine_sale") }}', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+			body: JSON.stringify(payload),
+		});
+		const result = await response.json();
+		if (!response.ok || !result.success) {
+			throw new Error(result.error || 'Could not save this sale.');
+		}
+		if (printAfterSave) {
+			window.location.href = result.sale.print_url || '{{ url_for("medicine_sales_list") }}';
+			return;
+		}
+		saleStatus.textContent = `Sale summary saved successfully. Invoice: ${result.sale.invoice_no}`;
+		reloadForNextSale();
+	} catch (error) {
+		saleStatus.textContent = error.message;
+		if (saveButton) saveButton.disabled = false;
+		if (savePrintButton) savePrintButton.disabled = false;
+	} finally {
+		if (!saleStatus.textContent.includes('Saving') && !saleStatus.textContent.includes('saved successfully')) {
+			if (saveButton) saveButton.disabled = false;
+			if (savePrintButton) savePrintButton.disabled = false;
+		}
+	}
+}
+
+if (saveButton) {
+	saveButton.addEventListener('click', function () {
+		saveSale(false);
+	});
+}
+
+savePrintButton.addEventListener('click', function () {
+	saveSale(true);
+});
+
+updateSummary();
+filterCartRows();
+</script>
+</body>
+</html>

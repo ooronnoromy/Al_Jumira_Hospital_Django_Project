@@ -1,0 +1,92 @@
+<section class="panel recent-panel" id="dayBillsPanel">
+    <div class="panel-header">
+        <div>
+            <p class="panel-kicker">Billing Records</p>
+            <h2>Day Wise Pathology Bills</h2>
+            <span class="day-bill-caption">Showing bills for {{ bill_date_label }}</span>
+        </div>
+        <form class="recent-search day-bill-filter" method="GET" action="{{ url_for('test_billing') }}" data-today-date="{{ today_bill_date }}">
+            <label class="recent-filter-field date-field" for="billDatePicker">
+                <span>Bill Date</span>
+                <input type="date" id="billDatePicker" name="bill_date" value="{{ bill_date }}">
+            </label>
+            <div class="day-bill-search-tools">
+                <input type="text" id="billKeyword" name="keyword" value="{{ keyword }}" placeholder="Search by UHID, Invoice No, or Phone Number">
+                <button type="button" id="billSearchClearBtn">Clear</button>
+            </div>
+            <div class="recent-filter-actions">
+                {% if bill_date != today_bill_date or keyword %}
+                    <a class="today-bills-link" href="{{ url_for('test_billing') }}">Today</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Serial</th>
+                    <th>Invoice</th>
+                    <th>Patient</th>
+                    <th>Phone</th>
+                    <th>Total</th>
+                    <th>Due</th>
+                    <th>Date</th>
+                    <th class="served-col">Served By</th>
+                    <th>Details</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if recent_bills %}
+                    {% for bill in recent_bills %}
+                        <tr>
+                            <td><span class="daily-serial-badge">{{ bill[8] or '-' }}</span></td>
+                            <td>{{ bill[1] }}</td>
+                            <td>{{ bill[2] }}</td>
+                            <td>{{ bill[3] }}</td>
+                            <td>Tk {{ '%.2f'|format(bill[4] or 0) }}</td>
+                            <td>Tk {{ '%.2f'|format(bill[5] or 0) }}</td>
+                            <td>{{ format_date_display(bill[6]) }}</td>
+                            <td class="served-col"><span class="served-by-badge">{{ bill[10] or 'Admin' }}</span></td>
+                            <td>
+                                <button
+                                    type="button"
+                                    class="bill-details-btn"
+                                    data-details-url="{{ url_for('test_bill_details', test_bill_id=bill[0]) }}"
+                                >
+                                    <i class="fas fa-eye"></i>
+                                    View Details
+                                </button>
+                            </td>
+                            <td>
+                                <div class="bill-row-actions">
+                                    <a class="print-link" href="{{ url_for('test_bill_print', test_bill_id=bill[0]) }}">
+                                        <i class="fas fa-print"></i>
+                                        Print
+                                    </a>
+                                    {% if bill[9] %}
+                                        <a class="test-return-link returned" href="{{ url_for('test_return', bill_id=bill[0]) }}">
+                                            <i class="fas fa-circle-check"></i>
+                                            Returned
+                                        </a>
+                                    {% else %}
+                                        <a class="test-return-link" href="{{ url_for('test_return', bill_id=bill[0]) }}">
+                                            <i class="fas fa-rotate-left"></i>
+                                            Return
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="empty-cell">No pathology bills found.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</section>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathology | AL-JUMIRA HOSPITAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pathology_dashboard.css') }}">
+</head>
+<body data-selected-item="{{ selected_item or '' }}">
+<div class="background-blobs"></div>
+
+<div class="dashboard">
+    <main class="main-content">
+        <header class="page-header">
+            <div>
+                <p>AL-JUMIRA HOSPITAL</p>
+                <div class="page-title-row">
+                    <h1><i class="fas fa-microscope"></i> Pathology Result Entry</h1>
+                    <div class="search-row title-search">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="globalSearch" type="search" placeholder="Search patient, UHID, invoice, phone or test">
+                        <span id="visibleCount">{{ patient_cases|length }} patients</span>
+
+            </div>
+            <form class="date-filter" method="GET" action="{{ url_for('pathology_dashboard') }}">
+                <label><i class="fas fa-calendar-day"></i> Date</label>
+                <input name="date" type="date" value="{{ selected_date }}">
+                <button type="submit">Show</button>
+                <a href="{{ url_for('pathology_dashboard') }}">Today</a>
+            </form>
+        </header>
+
+        <section class="pathology-workbench">
+            <aside class="glass-panel patients-column">
+                <div class="panel-heading">
+                    <div><small>STEP 1 · {{ date_label }}</small><h2>Daily Patients</h2></div>
+                    <span id="caseCount">{{ patient_cases|length }}</span>
+                </div>
+                <div class="patient-list" id="patientList">
+                    {% for case in patient_cases %}
+                    <button type="button" class="patient-card" data-invoice="{{ case.invoice_no }}" data-status="{{ case.sample_status }}"
+                        data-search="{{ case.patient_name }} {{ format_uhid(case.patient_uhid) }} {{ case.invoice_no }} {{ case.phone }} {{ case.test_names }}">
+                        <span class="avatar patient-serial" title="Daily patient serial">{{ case.daily_serial }}</span>
+                        <span class="patient-copy">
+                            <strong>{{ case.patient_name }}</strong>
+                        </span>
+                        {% set report_ready = case.test_count > 0 and case.completed_count >= case.test_count %}
+                        <span class="patient-report-status {{ 'ready' if report_ready else 'pending' }}">
+                            <i class="fas {{ 'fa-check' if report_ready else 'fa-clock' }}"></i>
+                            {{ 'Ready' if report_ready else 'Pending' }}
+                        </span>
+                    </button>
+                    {% else %}
+                    <div class="empty-state"><i class="fas fa-folder-open"></i><span>No pathology patients found.</span></div>
+                    {% endfor %}
+                </div>
+            </aside>
+
+            <section class="glass-panel details-column">
+                <div class="panel-heading">
+                    <div><small>STEP 2</small><h2>Patient Details & Tests</h2></div>
+                    <span id="queueCount">{{ pathology_orders|length }}</span>
+                </div>
+                <div class="patient-overview" id="patientOverview">
+                    <span class="overview-icon"><i class="fas fa-user"></i></span>
+                    <div><strong id="overviewName">Select a patient</strong><p id="overviewMeta">Patient information will appear here.</p></div>
+                </div>
+                <div class="detail-grid patient-test-details">
+                    <div><span>Invoice</span><strong id="selectedInvoice">-</strong></div>
+                    <div><span>Phone</span><strong id="selectedPhone">-</strong></div>
+                    <div><span>Age / Gender</span><strong id="selectedAgeGender">-</strong></div>
+                    <div><span>Sample</span><strong id="selectedSampleStatus">-</strong></div>
+                    <div><span>Doctor</span><strong id="selectedDoctor">-</strong></div>
+                    <div><span>Delivery</span><strong id="selectedDelivery">-</strong></div>
+                </div>
+                <div class="test-list" id="testList">
+                    {% for order in pathology_orders %}
+                    <article class="test-row" data-invoice="{{ order.invoice_no }}" data-status="{{ order.sample_status }}" data-result-state="{{ 'done' if order.result_value else 'open' }}"
+                        data-search="{{ order.patient_name }} {{ format_uhid(order.patient_uhid) }} {{ order.invoice_no }} {{ order.phone }} {{ order.doctor_name }} {{ order.test_name }}">
+                        <button type="button" class="test-pick"
+                            data-item-id="{{ order.item_id }}" data-action="/pathology_dashboard/result/{{ order.item_id }}"
+                            data-patient="{{ order.patient_name }}" data-phone="{{ order.phone }}"
+                            data-age="{{ order.age }} {{ order.age_unit }}" data-gender="{{ order.gender }}"
+                            data-uhid="{{ format_uhid(order.patient_uhid) }}" data-invoice="{{ order.invoice_no }}"
+                            data-test="{{ order.test_name }}" data-doctor="{{ order.doctor_name or '-' }}"
+                            data-delivery="{{ order.delivery_time or '-' }}" data-status="{{ order.sample_status }}"
+                            data-result="{{ order.result_value }}" data-note="{{ order.result_note }}"
+                            data-updated-at="{{ format_date_display(order.result_updated_at) if order.result_updated_at else '' }}"
+                            data-updated-by="{{ order.result_updated_by }}">
+                            <span class="test-number">{{ order.patient_test_serial }}</span>
+                            <span class="test-copy"><strong>{{ order.test_name }}</strong></span>
+                            <span class="result-badge {{ 'done' if order.result_value else 'open' }}">{{ 'Done' if order.result_value else 'Enter' }}</span>
+                        </button>
+                    </article>
+                    {% else %}
+                    <div class="empty-state"><i class="fas fa-flask-vial"></i><span>No tests found.</span></div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <aside class="glass-panel result-column" id="resultPanel">
+                <div class="panel-heading">
+                    <div><small>STEP 3</small><h2>Test Value Entry</h2></div>
+                    <span class="result-panel-state open" id="resultPanelState">Awaiting</span>
+                </div>
+                <div class="selected-test">
+                    <span><i class="fas fa-vial"></i></span>
+                    <div><small>SELECTED TEST</small><strong id="selectedTestName">Select a test</strong><p id="selectedPatient">Choose a test from the middle column.</p></div>
+                </div>
+<form class="result-form" id="resultForm" method="POST" action="">
+        {{ csrf_input }}
+                    <input type="hidden" name="selected_date" value="{{ selected_date }}">
+                    <label>Observed Value / Findings<textarea id="resultValue" name="result_value" rows="7" required placeholder="Enter test value, reference range, or findings..."></textarea></label>
+                    <label>Clinical Note <span>(optional)</span><textarea id="resultNote" name="result_note" rows="3" placeholder="Add a short report note..."></textarea></label>
+                    <p id="resultMeta"></p>
+                    <button id="saveResultBtn" type="submit" disabled><i class="fas fa-print"></i> Save &amp; Print Test Result</button>
+                </form>
+            </aside>
+        </section>
+    </main>
+</div>
+
+<script>
+const search = document.getElementById('globalSearch');
+const patientCards = [...document.querySelectorAll('.patient-card')];
+const testRows = [...document.querySelectorAll('.test-row')];
+const testButtons = [...document.querySelectorAll('.test-pick')];
+const resultForm = document.getElementById('resultForm');
+const resultValue = document.getElementById('resultValue');
+const resultNote = document.getElementById('resultNote');
+const saveButton = document.getElementById('saveResultBtn');
+
+function text(id, value) { document.getElementById(id).textContent = value || '-'; }
+function updateResultState() {
+    const done = resultValue.value.trim().length > 0;
+    const state = document.getElementById('resultPanelState');
+    state.className = 'result-panel-state ' + (done ? 'done' : 'open');
+    state.textContent = done ? 'Completed' : 'Awaiting';
+}
+function selectTest(button, focus = true) {
+    testRows.forEach(row => row.classList.remove('selected'));
+    button.closest('.test-row').classList.add('selected');
+    const hasSavedResult = (button.dataset.result || '').trim().length > 0;
+    resultForm.action = hasSavedResult ? `/pathology/report/${button.dataset.itemId}` : button.dataset.action;
+    resultForm.method = hasSavedResult ? 'GET' : 'POST';
+    saveButton.disabled = false;
+    text('selectedTestName', button.dataset.test);
+    text('selectedPatient', `${button.dataset.patient} · UHID ${button.dataset.uhid || '-'} `);
+    text('selectedInvoice', button.dataset.invoice);
+    text('selectedPhone', button.dataset.phone);
+    text('selectedAgeGender', `${button.dataset.age} / ${button.dataset.gender}`);
+    text('selectedSampleStatus', button.dataset.status);
+    text('selectedDoctor', button.dataset.doctor);
+    text('selectedDelivery', button.dataset.delivery);
+    resultValue.value = button.dataset.result || '';
+    resultNote.value = button.dataset.note || '';
+    resultValue.readOnly = hasSavedResult;
+    resultNote.readOnly = hasSavedResult;
+    saveButton.innerHTML = hasSavedResult
+        ? '<i class="fas fa-print"></i> Print Test Result'
+        : '<i class="fas fa-print"></i> Save &amp; Print Test Result';
+    text('resultMeta', button.dataset.updatedAt ? `Last saved ${button.dataset.updatedAt}${button.dataset.updatedBy ? ' by ' + button.dataset.updatedBy : ''}` : '');
+    updateResultState();
+    if (focus) resultValue.focus();
+}
+function selectPatient(card) {
+    patientCards.forEach(item => item.classList.toggle('active', item === card));
+    const invoice = card.dataset.invoice;
+    let shown = 0;
+    testRows.forEach(row => { row.hidden = row.dataset.invoice !== invoice; if (!row.hidden) shown++; });
+    text('queueCount', shown);
+    const copy = card.querySelector('.patient-copy');
+    text('overviewName', copy.querySelector('strong').textContent);
+    text('overviewMeta', `${shown} test${shown === 1 ? '' : 's'} selected for this patient.`);
+    const first = testRows.find(row => !row.hidden)?.querySelector('.test-pick');
+    if (first) selectTest(first, false);
+}
+patientCards.forEach(card => card.addEventListener('click', () => selectPatient(card)));
+testButtons.forEach(button => button.addEventListener('click', () => selectTest(button)));
+search.addEventListener('input', () => {
+    const query = search.value.trim().toLowerCase(); let visible = 0;
+    patientCards.forEach(card => { const show = (card.dataset.search || card.textContent).toLowerCase().includes(query); card.hidden = !show; if (show) visible++; });
+    testRows.forEach(row => row.hidden = query ? !(row.dataset.search || row.textContent).toLowerCase().includes(query) : false);
+    text('caseCount', visible); text('visibleCount', `${visible} patients`);
+});
+resultValue.addEventListener('input', updateResultState);
+const requested = document.body.dataset.selectedItem;
+const initialTest = requested ? testButtons.find(b => b.dataset.itemId === requested) : null;
+const initialPatient = initialTest ? patientCards.find(c => c.dataset.invoice === initialTest.dataset.invoice) : patientCards[0];
+if (initialPatient) selectPatient(initialPatient);
+if (initialTest) selectTest(initialTest, false);
+</script>
+</body>
+</html>

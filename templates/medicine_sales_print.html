@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Sales Invoice</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medicine_sales_print.css') }}">
+</head>
+
+<body data-return-url="{{ return_url or url_for('medicine_sales_list') }}">
+    <main class="bill-page">
+        <section class="bill-sheet" id="printArea">
+
+            <div class="bill-actions no-print">
+                <a href="{{ return_url or url_for('medicine_sales_list') }}" class="action-btn secondary">Back</a>
+                <button type="button" class="action-btn" onclick="printBill()">Print</button>
+            </div>
+
+        <!---  <header class="bill-header">
+                <div class="hospital-brand">
+                    <img src="{{ url_for('assets', filename='logo.png') }}" alt="Hospital Logo" class="hospital-logo">
+                    <div class="hospital-info">
+                        <strong>AL-JUMIRA HOSPITAL</strong>
+                        <span>Milk Vita Road, Dewla, Near ASA Office, Tangail</span>
+                        <span>Phone: 017767617979 | Email: aljumirahospital@gmail.com</span>
+                    </div>
+                </div>
+            </header> -->
+
+            <section class="bill-title-row">
+                <h2 class="bill-title"> SALES INVOICE</h2>
+                <div class="customer-copy-row">
+                    <h3 class="customer-copy-title">Customer Copy</h3>
+                </div>
+            </section>
+
+            <section class="bill-top">
+                <div class="bill-left">
+                    <p><strong>Invoice No</strong><span>:</span> {{ sale.invoice_no }}</p>
+                    <p><strong>Sale ID</strong><span>:</span> {{ sale.id }}</p>
+                    <p class="bill-highlight"><strong>Customer</strong><span>:</span> {{ sale.customer_name or 'Walk-in Customer' }}</p>
+                    <p><strong>Contact No</strong><span>:</span> {{ sale.customer_phone or '-' }}</p>
+                    <p><strong>Address</strong><span>:</span> {{ sale.customer_address or '-' }}</p>
+                    <p><strong>Payment Type</strong><span>:</span> {{ sale.payment_type or 'Cash' }}</p>
+                </div>
+
+                <div class="bill-right">
+                    <p><strong>Bill Date</strong><span>:</span> {{ sale.sale_date_display or '-' }}</p>
+                    <p><strong>Created At</strong><span>:</span> {{ sale.created_at_display or '-' }}</p>
+                    <p><strong>Payer</strong><span>:</span> CASH</p>
+                    <p class="bill-highlight"><strong>Status</strong><span>:</span> {% if sale.due_amount and sale.due_amount > 0 %}DUE{% else %}PAID{% endif %}</p>
+
+                    <div class="barcode-box">
+                        <img
+                            id="billBarcode"
+                            data-barcode="{{ sale.barcode }}"
+                            alt="Invoice Barcode"
+                        >
+                    </div>
+                </div>
+            </section>
+
+            <section class="item-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sno</th>
+                            <th>Medicine</th>
+                            <th>Batch</th>
+                            <th>Unit</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Discount</th>
+                            <th>Net Amount</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.medicine_name }}</td>
+                            <td>{{ item.batch_no or '-' }}</td>
+                            <td>{{ item.unit_type|title }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ "%.2f"|format(item.unit_price or 0) }}</td>
+                            <td>{{ "%.2f"|format(item.discount or 0) }}</td>
+                            <td>{{ "%.2f"|format(item.line_total or 0) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="empty-cell">No medicine items found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="summary-section">
+                <div class="payment-note">
+                    <div class="paid-box">
+                        <strong>{% if sale.due_amount and sale.due_amount > 0 %}DUE{% else %}PAID{% endif %}</strong>
+                        <span>Thank You</span>
+                    </div>
+                    <p>{{ sale.payment_type or 'Cash' }}: {{ "%.2f"|format(sale.received_amount or 0) }}</p>
+                </div>
+
+                <div class="amount-summary">
+                    <p><strong>Total Amount</strong><span>:</span> {{ "%.2f"|format(sale.subtotal or 0) }}</p>
+                    <p><strong>Discount</strong><span>:</span> {{ "%.2f"|format(sale.discount_amount or 0) }}</p>
+                    <p><strong>Tax</strong><span>:</span> {{ "%.2f"|format(sale.tax_amount or 0) }}</p>
+                    <p><strong>Delivery</strong><span>:</span> {{ "%.2f"|format(sale.delivery_cost or 0) }}</p>
+                    <p><strong>Net Amount</strong><span>:</span> {{ "%.2f"|format(sale.grand_total or 0) }}</p>
+                    <p><strong>Paid Amount</strong><span>:</span> {{ "%.2f"|format(sale.received_amount or 0) }}</p>
+                    <p><strong>Due Amount</strong><span>:</span> {{ "%.2f"|format(sale.due_amount or 0) }}</p>
+                    <p><strong>Change</strong><span>:</span> {{ "%.2f"|format(sale.change_amount or 0) }}</p>
+                </div>
+            </section>
+
+            <section class="amount-word">
+                <p>
+                    <strong>Amount in Words</strong>
+                    "{{ amount_in_words or 'ZERO' }}" Taka Only
+                </p>
+            </section>
+
+            <section class="narration">
+                <p><strong>Narration :</strong> Pharmacy medicine sales invoice.</p>
+            </section>
+
+            <section class="signature-row">
+                <div></div>
+                <div>
+                    <span></span>
+                    <p>Authorised Signatory</p>
+                </div>
+            </section>
+
+            <section class="instruction-section">
+                <p><strong>Note:</strong></p>
+                <p>* Please check medicine name, batch, quantity, price and payment information before leaving the counter.</p>
+                <p>* Sold medicine may be exchanged only according to hospital pharmacy policy.</p>
+                <p>* This is a computer-generated pharmacy invoice.</p>
+            </section>
+
+            <footer class="bill-footer">
+                <p><strong>Prepared By:</strong> {{ prepared_by or 'Admin' }}</p>
+                <p><strong>Printed By:</strong> {{ printed_by or 'Admin' }}</p>
+                <p><strong>Printed At:</strong> <span id="printedTimestamp">--</span></p>
+                <p>1 of 1</p>
+            </footer>
+
+        </section>
+    </main>
+
+    <script>
+        const salesListUrl = document.body.dataset.returnUrl || "/medicine_sales_list";
+        let hasReturnedToSalesList = false;
+
+        const code128Patterns = [
+            "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312", "132212", "221213",
+            "221312", "231212", "112232", "122132", "122231", "113222", "123122", "123221", "223211", "221132",
+            "221231", "213212", "223112", "312131", "311222", "321122", "321221", "312212", "322112", "322211",
+            "212123", "212321", "232121", "111323", "131123", "131321", "112313", "132113", "132311", "211313",
+            "231113", "231311", "112133", "112331", "132131", "113123", "113321", "133121", "313121", "211331",
+            "231131", "213113", "213311", "213131", "311123", "311321", "331121", "312113", "312311", "332111",
+            "314111", "221411", "431111", "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+            "112412", "122114", "122411", "142112", "142211", "241211", "221114", "413111", "241112", "134111",
+            "111242", "121142", "121241", "114212", "124112", "124211", "411212", "421112", "421211", "212141",
+            "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113", "411311", "113141",
+            "114131", "311141", "411131", "211412", "211214", "211232", "2331112"
+        ];
+
+        function updatePrintedTimestamp() {
+            const timestampElement = document.getElementById("printedTimestamp");
+
+            if (!timestampElement) return;
+
+            const now = new Date();
+            const pad = function (value) {
+                return String(value).padStart(2, "0");
+            };
+
+            timestampElement.textContent = now.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric"
+            }) + " " + now.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            });
+        }
+
+        function getCode128Codes(value) {
+            const safeValue = String(value || "000000").replace(/[^\x20-\x7e]/g, "");
+            const codes = [104];
+
+            for (const character of safeValue || "000000") {
+                codes.push(character.charCodeAt(0) - 32);
+            }
+
+            const checksum = codes.reduce(function (sum, code, index) {
+                return sum + (index === 0 ? code : code * index);
+            }, 0) % 103;
+
+            codes.push(checksum, 106);
+
+            return {
+                codes: codes,
+                value: safeValue || "000000"
+            };
+        }
+
+        function drawCode128Barcode(canvas, value) {
+            const barcode = getCode128Codes(value);
+            const unitWidth = 3;
+            const quietZone = unitWidth * 10;
+            const height = 80;
+            let x = 0;
+
+            const totalModules = barcode.codes.reduce(function (total, code) {
+                return total + code128Patterns[code].split("").reduce(function (sum, width) {
+                    return sum + Number(width);
+                }, 0);
+            }, 0);
+
+            canvas.width = totalModules * unitWidth + quietZone * 2;
+            canvas.height = height;
+
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#fff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = "#000";
+
+            x = quietZone;
+
+            for (const code of barcode.codes) {
+                const pattern = code128Patterns[code];
+
+                for (let index = 0; index < pattern.length; index += 1) {
+                    const width = Number(pattern[index]) * unitWidth;
+
+                    if (index % 2 === 0) {
+                        context.fillRect(x, 0, width, height);
+                    }
+
+                    x += width;
+                }
+            }
+        }
+
+        function generateBarcode() {
+            return new Promise(function (resolve) {
+                const barcodeElement = document.getElementById("billBarcode");
+
+                if (!barcodeElement) {
+                    resolve();
+                    return;
+                }
+
+                const barcodeValue = barcodeElement.dataset.barcode || "000000";
+                const canvas = document.createElement("canvas");
+
+                drawCode128Barcode(canvas, barcodeValue);
+
+                barcodeElement.onload = function () {
+                    resolve();
+                };
+                barcodeElement.onerror = function () {
+                    resolve();
+                };
+                barcodeElement.src = canvas.toDataURL("image/png");
+                window.setTimeout(resolve, 150);
+            });
+        }
+
+        function returnToSalesList() {
+            if (hasReturnedToSalesList) return;
+
+            hasReturnedToSalesList = true;
+            window.location.replace(salesListUrl);
+        }
+
+        async function printBill() {
+            updatePrintedTimestamp();
+            await generateBarcode();
+            await new Promise(function (resolve) {
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(resolve);
+                });
+            });
+            window.print();
+        }
+
+        updatePrintedTimestamp();
+        generateBarcode();
+
+        window.addEventListener("beforeprint", function () {
+            updatePrintedTimestamp();
+
+            const barcodeElement = document.getElementById("billBarcode");
+            if (barcodeElement && !barcodeElement.src) {
+                generateBarcode();
+            }
+        });
+
+        window.addEventListener("afterprint", function () {
+            window.setTimeout(returnToSalesList, 300);
+        });
+
+        window.setTimeout(function () {
+            printBill();
+        }, 700);
+    </script>
+
+</body>
+</html>

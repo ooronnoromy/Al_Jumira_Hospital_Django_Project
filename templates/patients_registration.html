@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patients Registration | AL-JUMIRA HOSPITAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/patients_registration.css') }}">
+</head>
+<body data-is-admin="{{ 'true' if admin|default(false) else 'false' }}">
+
+<div class="background-blobs"></div>
+
+{% if request.GET.get('success') or request.GET.get('error') %}
+<div class="toast-message {% if request.GET.get('error') %}error{% endif %}" id="patientSuccessToast">
+    <i class="fas {% if request.GET.get('error') %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+    <span>{{ request.GET.get('success') or request.GET.get('error') }}</span>
+</div>
+{% endif %}
+
+ <div class="dashboard">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <a href="{{ url_for('dashboard') }}" class="brand-link" id="hmsBrand">
+                <img src="{{ url_for('assets', filename='logo.png') }}" alt="AJH Logo" class="brand-logo">
+                <span class="brand-text">AJH</span>
+            </a>
+        </div>
+        <div class="sidebar-menu" id="patientSidebarMenu">
+            {% if can_access_page('dashboard') %}
+            <a id="dashboardNav" class="sidebar-item" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            {% endif %}
+
+
+            <button type="button" id="newPatientNav" class="sidebar-item">
+                <i class="fas fa-user-plus"></i>
+                <span>Register Patient</span>
+            </button>
+
+
+            <button type="button" id="patientListNav" class="sidebar-item" data-list-url="{{ url_for('patients_registration', view='list') }}">
+                <i class="fas fa-list"></i>
+                <span>Daily Patients List</span>
+            </button>
+
+            <a id="allPatientsNav"
+               class="sidebar-item"
+               href="{{ url_for('patients_registration') }}?view=all"
+               data-all-url="{{ url_for('patients_registration') }}?view=all"
+               onclick="window.location.href=this.dataset.allUrl; return false;">
+                <i class="fas fa-users"></i>
+                <span>All Patients List</span>
+            </a>
+
+            <a id="patientsInfoNav" class="sidebar-item" href="{{ url_for('patients_info') }}">
+                <i class="fas fa-address-card"></i>
+                <span>Patients Info</span>
+            </a>
+
+
+
+
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <section class="patient-list-panel" id="patientListPanel" aria-label="Registered patient list">
+ <div class="patient-list-header">
+    <div class="patient-list-title-group">
+        <h2><i class="fas fa-list"></i> {{ 'All Patients List' if show_all_patients else 'Daily Patients List' }}</h2>
+        {% if not show_all_patients %}
+        <div class="daily-total-pt">
+            <span>Total PT</span>
+            <strong>{{ daily_patient_total }}</strong>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="header-actions">
+            {% if show_all_patients %}
+            <a class="date-filter-btn list-switch-btn" href="{{ url_for('patients_registration', view='list') }}">
+                <i class="fas fa-calendar-day"></i>
+                <span>Daily Patients List</span>
+            </a>
+            {% else %}
+            <form class="date-filter-bar" method="GET" action="{{ url_for('patients_registration') }}">
+                <input type="hidden" name="view" value="list">
+                <div class="date-filter-label">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Date</span>
+                </div>
+                <input type="date" name="date" value="{{ selected_date or '' }}" class="date-filter-input">
+                <button type="submit" class="date-filter-btn">Show</button>
+                {% if selected_date %}
+                <a class="date-filter-clear" href="{{ url_for('patients_registration', view='list') }}">Clear</a>
+                {% endif %}
+            </form>
+            {% endif %}
+            <div class="patient-list-tools">
+                <input type="text" id="patientSearchInput" placeholder="Search by UHID, Ticket No, or Phone Number">
+                <button type="button" id="patientSearchClearBtn">Clear</button>
+            </div>
+
+    </div>
+</div>
+
+            <div class="patient-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="id-col">UHID</th>
+                            <th class="ticket-col">Ticket No</th>
+                            <th class="name-col">Name</th>
+                            <th class="age-col">Age</th>
+                            <th class="gender-col">Gender</th>
+                            <th class="phone-col">Phone</th>
+                            <th class="address-col">Address</th>
+                            <th class="served-col">Served By</th>
+                            <th class="action-col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientTableBody">
+                        {% if patients %}
+                            {% for patient in patients %}
+                            <tr>
+                                <td class="id-col">{{ format_uhid(patient[8] or patient[0]) }}</td>
+                                <td class="ticket-col">{{ patient[1] or '-' }}</td>
+                                <td class="name-col">{{ patient[2] }}</td>
+                                <td class="age-col">{{ patient[3] }} {{ patient[4] }}</td>
+                                <td class="gender-col">{{ patient[5] }}</td>
+                                <td class="phone-col">{{ patient[6] }}</td>
+                                <td class="address-col">{{ patient[7] }}</td>
+                                <td class="served-col"><span class="served-by-badge">{{ patient[10] or 'Admin' }}</span></td>
+                                <td class="action-col">
+                                    <div class="row-actions">
+                                        <a href="{{ url_for('ticket_print', patient_id=patient[0]) }}" class="print-ticket-btn">
+                                            <i class="fas fa-print"></i> Print
+                                        </a>
+                                        {% if not show_all_patients %}
+                                            {% if patient[9] %}
+                                            <a href="{{ url_for('visit_return', patient_id=patient[0]) }}" class="visit-return-btn returned">
+                                                <i class="fas fa-circle-check"></i> Returned
+                                            </a>
+                                            {% else %}
+                                            <a href="{{ url_for('visit_return', patient_id=patient[0]) }}" class="visit-return-btn">
+                                                <i class="fas fa-rotate-left"></i> Visit Return
+                                            </a>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if admin %}
+<form class="inline-delete-form" method="POST" action="{{ url_for('delete_patient', patient_id=patient[0]) }}" onsubmit="return confirm('Are you sure you want to delete this patient?');">
+                                        {{ csrf_input }}
+                                            <input type="hidden" name="return_view" value="{{ 'all' if show_all_patients else 'list' }}">
+                                            <input type="hidden" name="selected_date" value="{{ selected_date or '' }}">
+                                            <button type="submit" class="delete-btn">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9">No patients found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="patients-info-action-row">
+                <a class="patients-info-btn" href="{{ url_for('patients_info') }}">
+                    <i class="fas fa-address-card"></i>
+                    <span>Patients Info</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Patient Registration Form -->
+        <div class="form-container">
+            <div class="patient-number-grid">
+                <div class="patient-id-card">
+                    <h3>Patient UHID</h3>
+                    <div class="id-value" id="patientUHID">Auto</div>
+                </div>
+                <div class="patient-id-card">
+                    <h3>Ticket No</h3>
+                    <div class="id-value" id="dailyTicketNo">{{ next_daily_ticket_no or 'Auto' }}</div>
+                </div>
+                <div class="patient-id-card serial-card">
+                    <label for="serialNo">Serial No</label>
+                    <input type="text" id="serialNo" name="serial_no" form="patientRegistrationForm" inputmode="numeric" autocomplete="off">
+                </div>
+            </div>
+
+<form id="patientRegistrationForm" class="glass-form" action="{{ url_for('add_patient', next='patients_registration') }}" method="POST">
+                {{ csrf_input }}
+                <div class="patient-form-header">
+                    <div class="patient-title-actions">
+                        <h2><i class="fas fa-hospital-user"></i> Patient Registration</h2>
+                        <button type="button" class="old-patient-search-toggle" id="oldPatientSearchToggle">
+                            <i class="fas fa-search"></i>
+                            <span>Search Old Patient</span>
+                        </button>
+                    </div>
+                    <div class="entry-timestamp">
+                        <strong>Date & Time:</strong> <span id="printedTimestamp">--</span>
+                    </div>
+                </div>
+
+                <div class="old-patient-search-panel" id="oldPatientSearchPanel">
+                    <div class="old-patient-search-bar">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="oldPatientSearchInput" placeholder="Search UHID (example: 18 or AJH18), Ticket No, Name, or Phone">
+                        <button type="button" id="oldPatientSearchBtn">Search</button>
+                        <button type="button" id="oldPatientClearBtn">Clear</button>
+                    </div>
+                    <div class="old-patient-results" id="oldPatientResults">
+                        <p>Search your All Patients List, then select a patient to create today's bill.</p>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+
+                    <div class="form-column left-column">
+                        <!-- Left Column -->
+
+                        <div class="input-group">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="fullName" name="name" required autofocus placeholder=" ">
+                            <label>Full Name</label>
+                        </div>
+
+                        <!-- Age  -->
+                        <div class="age-gender-row">
+
+                            <div class="input-group age-box">
+                                <i class="fas fa-hashtag"></i>
+
+                                <div class="age-input-wrapper">
+                                    <input type="number" id="age" name="age" required min="0">
+
+                                    <select id="ageUnit" name="age_unit" aria-label="Age unit" required>
+                                        <option value="Y" selected>Y</option>
+                                        <option value="M">M</option>
+                                        <option value="D">D</option>
+                                    </select>
+                                </div>
+
+                                <label>Age</label>
+                            </div>
+
+                            <div class="input-group gender-box">
+                                <i class="fas fa-venus-mars"></i>
+                                <select id="gender" name="gender" required>
+                                    <option value="" disabled selected></option>
+                                    <option>Female</option>
+                                    <option>Male</option>
+                                    <option>Other</option>
+                                </select>
+                                <label>Gender</label>
+                            </div>
+
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fas fa-phone"></i>
+                            <input
+                                type="tel"
+                                id="phone"
+                                name="phone"
+                                maxlength="11"
+                                pattern="[0-9]{1,11}"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
+                                required>
+                            <label>Phone Number</label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <i class="fas fa-droplet"></i>
+                            <select id="bloodGroup" name="blood_group" required>
+                                <option value="" disabled selected></option>
+                                <option>B+</option>
+                                <option>B-</option>
+                                <option>A-</option>
+                                <option>A+</option>
+                                <option>AB+</option>
+                                <option>AB-</option>
+                                <option>O+</option>
+                                <option>O-</option>
+                            </select>
+                            <label>Blood Group</label>
+                        </div>
+                        
+                        <div class="input-group address-group">
+                            <i class="fas fa-location-dot"></i>
+                            <textarea id="address" name="address" placeholder=" " required></textarea>
+                            <label>Address</label>
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fas fa-user-check"></i>
+                            <select id="patientStatus" name="patient_status" required>
+                                <option value="" disabled selected></option>
+                                <option>OLD</option>
+                                <option>NEW</option>
+                                
+                            </select>
+                            <label>Patient Status</label>
+                        </div>
+                    </div>
+
+                    <div class="form-column right-column">
+                        <!-- Right Column -->
+
+                        <div class="input-group">
+                            <i class="fas fa-user-md"></i>
+                            <select id="doctorname" name="doctor_name" required>
+                                <option value="" disabled selected></option>
+                                {% for doctor in doctor_options %}
+                                <option value="{{ doctor[1] }}" data-designation="{{ doctor[2] }}" data-fee="{{ doctor[3] or 0 }}">{{ doctor[1] }}</option>
+                                {% endfor %}
+                            </select>
+                            <label>Doctor Name</label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <input type="text" id="doctorDesignation" name="doctor_designation" placeholder=" " readonly>
+                            <label>Doctor Designation</label>
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fas fa-user-friends"></i>
+                            <select id="refererName" name="referer_name" required>
+                                <option value="" disabled selected></option>
+                                <option>Self</option>
+                                <option>MD</option>
+                                <option>Sobuj</option>
+
+                            </select>
+                            <label>Name Of Referer</label>
+                        
+                        </div>
+                        <div class="input-group">
+                            <i class="fas fa-phone-volume"></i>
+                            <input
+                                type="tel"
+                                id="emergencyContactNumber"
+                                name="emergency_contact_phone"
+                                maxlength="11"
+                                pattern="[0-9]{1,11}"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
+                                placeholder=" ">
+                            <label>Emergency Contact Number</label>
+                        </div>
+
+
+                        <section class="registration-payment-section">
+                            <div class="payment-section-heading">
+                                <div>
+                                    <span>Ticket Payment</span>
+                                    <h3>Billing &amp; Due</h3>
+                                </div>
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </div>
+                            <div class="payment-field-grid">
+                                <div class="input-group">
+                                    <i class="fas fa-wallet"></i>
+                                    <input type="number" id="doctorFee" name="doctor_fee" min="0" step="0.01" placeholder="0.00" readonly>
+                                    <label>Doctor Fee</label>
+                                </div>
+                                <div class="input-group">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <input type="number" id="doctorPaidAmount" name="doctor_paid_amount" min="0" step="0.01" placeholder="0.00">
+                                    <label>Paid Amount</label>
+                                </div>
+                                <div class="input-group due-amount-field">
+                                    <i class="fas fa-hand-holding-dollar"></i>
+                                    <input type="number" id="doctorDueAmount" name="doctor_due_amount" value="0.00" readonly>
+                                    <label>Due Amount</label>
+                                </div>
+                            </div>
+                            <div class="payment-status-line">
+                                <span id="registrationPaymentStatus">Enter the doctor fee and paid amount.</span>
+                                <strong id="registrationDuePreview">Due Tk 0.00</strong>
+                            </div>
+                        </section>
+
+
+                    </div>
+
+                </div>
+
+                <input type="hidden" id="patientSaveAction" name="save_action" value="register">
+                <input type="hidden" id="existingPatientId" name="existing_patient_id" value="">
+
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn" id="registerPatientBtn" data-save-action="register">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Register Patient</span>
+                    </button>
+                    <a class="submit-btn test-page-btn" href="{{ url_for('test_billing') }}">
+                        <i class="fas fa-vial"></i>
+                        <span>Test</span>
+                    </a>
+                    <button type="submit" class="submit-btn save-print-btn" id="savePrintPatientBtn" data-save-action="save_print">
+                        <i class="fas fa-print"></i>
+                        <span>Save &amp; Print</span>
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </main>
+
+ </div>
+
+<footer class="dashboard-footer">
+  <span>©</span>
+  <span>Copyright</span>
+  <span>AL-JUMIRA HOSPITAL</span>
+  <span>Patient Management System</span>
+  <span id="dashboardFooterYear"></span>
+</footer>
+    <script>
+    const patientForm = document.querySelector(".glass-form");
+    const patientTableBody = document.getElementById("patientTableBody");
+    const newPatientNav = document.getElementById("newPatientNav");
+    const patientListNav = document.getElementById("patientListNav");
+    const allPatientsNav = document.getElementById("allPatientsNav");
+    const patientListPanel = document.getElementById("patientListPanel");
+    const formContainer = document.querySelector(".form-container");
+    const ageInput = document.getElementById("age");
+    const doctorNameSelect = document.getElementById("doctorname");
+    const doctorDesignationInput = document.getElementById("doctorDesignation");
+    const submitButtons = patientForm.querySelectorAll("button.submit-btn");
+    const registerPatientBtn = document.getElementById("registerPatientBtn");
+    const savePrintPatientBtn = document.getElementById("savePrintPatientBtn");
+    const patientSaveActionInput = document.getElementById("patientSaveAction");
+    const patientSearchInput = document.getElementById("patientSearchInput");
+    const patientSearchClearBtn = document.getElementById("patientSearchClearBtn");
+    const oldPatientSearchToggle = document.getElementById("oldPatientSearchToggle");
+    const oldPatientSearchPanel = document.getElementById("oldPatientSearchPanel");
+    const oldPatientSearchInput = document.getElementById("oldPatientSearchInput");
+    const oldPatientSearchBtn = document.getElementById("oldPatientSearchBtn");
+    const oldPatientClearBtn = document.getElementById("oldPatientClearBtn");
+    const oldPatientResults = document.getElementById("oldPatientResults");
+    const existingPatientIdInput = document.getElementById("existingPatientId");
+    const patientUHID = document.getElementById("patientUHID");
+    const dashboardNav = document.getElementById("dashboardNav");
+    const billingNav = document.getElementById("billingNav");
+    const hmsBrand = document.getElementById("hmsBrand");
+    const sidebarItems = document.querySelectorAll("#patientSidebarMenu .sidebar-item");
+    const fullNameInput = document.getElementById("fullName");
+    const ageUnitSelect = document.getElementById("ageUnit");
+    const genderSelect = document.getElementById("gender");
+    const phoneInput = document.getElementById("phone");
+    const bloodGroupSelect = document.getElementById("bloodGroup");
+    const addressInput = document.getElementById("address");
+    const patientStatusSelect = document.getElementById("patientStatus");
+    const refererNameSelect = document.getElementById("refererName");
+    const emergencyContactNumberInput = document.getElementById("emergencyContactNumber");
+    const doctorFeeInput = document.getElementById("doctorFee");
+    const doctorPaidAmountInput = document.getElementById("doctorPaidAmount");
+    const doctorDueAmountInput = document.getElementById("doctorDueAmount");
+    const registrationPaymentStatus = document.getElementById("registrationPaymentStatus");
+    const registrationDuePreview = document.getElementById("registrationDuePreview");
+    let oldPatientSearchTimer = null;
+    let oldPatientSearchRequestId = 0;
+
+    function formatUHID(value) {
+        const text = String(value || "").trim();
+        if (!text) return "-";
+        return text.toUpperCase().startsWith("AJH") ? `AJH${text.slice(3).trim()}` : `AJH${text}`;
+    }
+
+    function readPaymentAmount(field) {
+        const value = Number(field && field.value ? field.value : 0);
+        return Number.isFinite(value) && value >= 0 ? value : 0;
+    }
+
+    function updateRegistrationDue() {
+        const fee = readPaymentAmount(doctorFeeInput);
+        const paid = readPaymentAmount(doctorPaidAmountInput);
+        const due = Math.max(fee - Math.min(paid, fee), 0);
+        doctorDueAmountInput.value = due.toFixed(2);
+        doctorDueAmountInput.classList.add("has-value");
+        doctorPaidAmountInput.setCustomValidity(paid > fee ? "Paid amount cannot be greater than the doctor fee." : "");
+        registrationDuePreview.textContent = `Due Tk ${due.toFixed(2)}`;
+        registrationPaymentStatus.textContent = due > 0
+            ? "This ticket will be saved with an outstanding due."
+            : (fee > 0 ? "Doctor fee is fully paid." : "Enter the doctor fee and paid amount.");
+        registrationPaymentStatus.classList.toggle("has-due", due > 0);
+        registrationPaymentStatus.classList.toggle("is-paid", fee > 0 && due === 0);
+    }
+
+    function setActiveSidebarItem(activeItem) {
+        sidebarItems.forEach(function (item) {
+            item.classList.remove("active");
+        });
+
+        if (activeItem) {
+            activeItem.classList.add("active");
+        }
+    }
+
+    function navigateWithActive(linkElement) {
+        const targetUrl = linkElement.getAttribute("href");
+        setActiveSidebarItem(linkElement);
+        window.setTimeout(function () {
+            window.location.href = targetUrl;
+        }, 120);
+    }
+
+    function updateAgeState() {
+        const ageBox = ageInput.closest(".age-box");
+        if (ageInput.value !== "") {
+            ageInput.classList.add("has-value");
+            if (ageBox) ageBox.classList.add("has-value");
+        } else {
+            ageInput.classList.remove("has-value");
+            if (ageBox) ageBox.classList.remove("has-value");
+        }
+    }
+
+    function showPatientFormView() {
+        formContainer.style.display = "block";
+        patientListPanel.style.display = "none";
+        setActiveSidebarItem(newPatientNav);
+    }
+
+    function showPatientListView(activeItem) {
+        formContainer.style.display = "none";
+        patientListPanel.style.display = "block";
+        setActiveSidebarItem(activeItem || patientListNav);
+    }
+
+    ageInput.addEventListener("input", function () {
+        updateAgeState();
+    });
+
+    function updateDoctorDesignation(resetPaidAmount) {
+        if (!doctorNameSelect || !doctorDesignationInput) return;
+
+        const selectedOption = doctorNameSelect.options[doctorNameSelect.selectedIndex];
+        const designation = selectedOption ? selectedOption.dataset.designation || "" : "";
+        const configuredFee = selectedOption ? Number(selectedOption.dataset.fee || 0) : 0;
+
+        doctorDesignationInput.value = designation;
+        doctorDesignationInput.classList.toggle("has-value", designation !== "");
+        doctorFeeInput.value = selectedOption ? configuredFee.toFixed(2) : "";
+        if (resetPaidAmount) {
+            doctorPaidAmountInput.value = "";
+        }
+        markFieldHasValue(doctorFeeInput);
+        markFieldHasValue(doctorPaidAmountInput);
+        updateRegistrationDue();
+    }
+
+    function markFieldHasValue(field) {
+        if (!field) return;
+        const hasValue = field.value !== "";
+        field.classList.toggle("has-value", hasValue);
+        if (field === ageInput) {
+            updateAgeState();
+        }
+    }
+
+    function setSelectValue(select, value) {
+        if (!select) return;
+        const cleanValue = value || "";
+        const option = Array.from(select.options).find(function (item) {
+            return item.value === cleanValue || item.textContent.trim() === cleanValue;
+        });
+
+        if (option) {
+            select.value = option.value;
+        } else {
+            select.value = "";
+        }
+        markFieldHasValue(select);
+    }
+
+    function fillOldPatient(patient) {
+        existingPatientIdInput.value = patient.id || "";
+        patientUHID.textContent = patient.id ? "Old UHID " + formatUHID(patient.id) : "Auto";
+        fullNameInput.value = patient.name || "";
+        ageInput.value = patient.age || "";
+        setSelectValue(ageUnitSelect, patient.age_unit || "Y");
+        setSelectValue(genderSelect, patient.gender || "");
+        phoneInput.value = patient.phone || "";
+        setSelectValue(bloodGroupSelect, patient.blood_group || "");
+        addressInput.value = patient.address || "";
+        setSelectValue(patientStatusSelect, "OLD");
+        setSelectValue(doctorNameSelect, patient.doctor_name || "");
+        doctorDesignationInput.value = patient.doctor_designation || "";
+        setSelectValue(refererNameSelect, patient.referer_name || "Self");
+        emergencyContactNumberInput.value = patient.emergency_contact_phone || "";
+        doctorFeeInput.value = patient.doctor_fee || "";
+        doctorPaidAmountInput.value = "";
+        updateRegistrationDue();
+
+        [
+            fullNameInput, ageInput, phoneInput, bloodGroupSelect, addressInput,
+            patientStatusSelect, doctorNameSelect, doctorDesignationInput,
+            refererNameSelect, emergencyContactNumberInput, doctorFeeInput,
+            doctorPaidAmountInput, doctorDueAmountInput
+        ].forEach(markFieldHasValue);
+        updateDoctorDesignation(false);
+        if (patient.doctor_designation && !doctorDesignationInput.value) {
+            doctorDesignationInput.value = patient.doctor_designation;
+            markFieldHasValue(doctorDesignationInput);
+        }
+        oldPatientResults.innerHTML = "<p class=\"old-patient-selected\"><i class=\"fas fa-circle-check\"></i> Old patient selected: " + (patient.name || "") + " | UHID " + formatUHID(patient.id) + ". Now create today's bill and print.</p>";
+    }
+
+    function clearOldPatientSelection() {
+        existingPatientIdInput.value = "";
+        patientUHID.textContent = "Auto";
+        oldPatientSearchInput.value = "";
+        oldPatientResults.innerHTML = "<p>Search your All Patients List, then select a patient to create today's bill.</p>";
+    }
+
+    function renderOldPatientResults(patients) {
+        if (!patients.length) {
+            oldPatientResults.innerHTML = '<p>No old patient found in All Patients List.</p>';
+            return;
+        }
+
+        oldPatientResults.innerHTML = patients.map(function (patient) {
+            return '<button type="button" class="old-patient-result" data-patient-id="' + patient.id + '">' +
+                '<strong>' + patient.name + '</strong>' +
+                '<span>UHID ' + formatUHID(patient.id) + ' | ' + (patient.phone || '-') + ' | ' + (patient.age || '-') + ' ' + (patient.age_unit || '') + ' | ' + (patient.gender || '-') + '</span>' +
+                '<small>' + (patient.address || '') + '</small>' +
+            '</button>';
+        }).join("");
+
+        oldPatientResults.querySelectorAll(".old-patient-result").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const selectedPatient = patients.find(function (patient) {
+                    return String(patient.id) === String(button.dataset.patientId);
+                });
+                if (selectedPatient) {
+                    fillOldPatient(selectedPatient);
+                }
+            });
+        });
+    }
+
+    function searchOldPatients() {
+        const keyword = oldPatientSearchInput.value.trim();
+        if (keyword.length < 2) {
+            oldPatientResults.innerHTML = "<p>Please type at least 2 characters.</p>";
+            return;
+        }
+
+        const requestId = ++oldPatientSearchRequestId;
+        oldPatientResults.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Searching old patients...</p>';
+        fetch("/patients-registration/search?keyword=" + encodeURIComponent(keyword), {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (requestId !== oldPatientSearchRequestId || oldPatientSearchInput.value.trim() !== keyword) {
+                    return;
+                }
+                renderOldPatientResults(data.patients || []);
+            })
+            .catch(function () {
+                if (requestId !== oldPatientSearchRequestId) {
+                    return;
+                }
+                oldPatientResults.innerHTML = "<p>Search failed. Please try again.</p>";
+            });
+    }
+
+    function scheduleOldPatientSearch() {
+        clearTimeout(oldPatientSearchTimer);
+        existingPatientIdInput.value = "";
+        patientUHID.textContent = "Auto";
+
+        const keyword = oldPatientSearchInput.value.trim();
+        if (keyword.length < 2) {
+            oldPatientSearchRequestId += 1;
+            oldPatientResults.innerHTML = "<p>Type at least 2 characters to search automatically.</p>";
+            return;
+        }
+
+        oldPatientResults.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Searching old patients...</p>';
+        oldPatientSearchTimer = setTimeout(searchOldPatients, 350);
+    }
+
+    if (doctorNameSelect) {
+        doctorNameSelect.addEventListener("change", function () {
+            updateDoctorDesignation(true);
+        });
+        updateDoctorDesignation(false);
+    }
+
+    doctorFeeInput.addEventListener("input", updateRegistrationDue);
+    doctorPaidAmountInput.addEventListener("input", updateRegistrationDue);
+    updateRegistrationDue();
+
+    oldPatientSearchToggle.addEventListener("click", function () {
+        oldPatientSearchPanel.classList.toggle("show");
+        if (oldPatientSearchPanel.classList.contains("show")) {
+            oldPatientSearchInput.focus();
+        }
+    });
+
+    oldPatientSearchBtn.addEventListener("click", searchOldPatients);
+    oldPatientSearchInput.addEventListener("input", scheduleOldPatientSearch);
+    oldPatientSearchInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            clearTimeout(oldPatientSearchTimer);
+            searchOldPatients();
+        }
+    });
+    oldPatientClearBtn.addEventListener("click", clearOldPatientSelection);
+
+    patientSearchInput.addEventListener("input", function () {
+        const searchTerm = this.value.trim().toLowerCase();
+        const rows = patientTableBody.querySelectorAll("tr");
+
+        rows.forEach(function (row) {
+            const idCell = row.cells[0];
+            const ticketCell = row.cells[1];
+            const phoneCell = row.cells[5];
+
+            if (!idCell || !phoneCell) {
+                row.style.display = "";
+                return;
+            }
+
+            const idText = idCell.textContent.toLowerCase();
+            const ticketText = ticketCell ? ticketCell.textContent.toLowerCase() : "";
+            const phoneText = phoneCell.textContent.toLowerCase();
+            const isMatch = idText.includes(searchTerm) || ticketText.includes(searchTerm) || phoneText.includes(searchTerm);
+            row.style.display = isMatch ? "" : "none";
+        });
+    });
+
+    patientSearchClearBtn.addEventListener("click", function () {
+        patientSearchInput.value = "";
+        patientTableBody.querySelectorAll("tr").forEach(function (row) {
+            row.style.display = "";
+        });
+    });
+
+        submitButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                const selectedAction = button.dataset.saveAction || "register";
+                if (patientSaveActionInput) {
+                    patientSaveActionInput.value = selectedAction;
+                }
+                if (doctorFeeInput) {
+                    doctorFeeInput.required = selectedAction === "save_print";
+                }
+            });
+        });
+
+        patientForm.addEventListener("submit", function (event) {
+            const activeButton = event.submitter || registerPatientBtn;
+            const saveAction = activeButton ? activeButton.dataset.saveAction || "register" : "register";
+            const activeText = saveAction === "save_print" ? "Saving..." : "Registering...";
+
+            if (patientSaveActionInput) {
+                patientSaveActionInput.value = saveAction;
+            }
+            if (doctorFeeInput) {
+                doctorFeeInput.required = saveAction === "save_print";
+            }
+
+            submitButtons.forEach(function (button) {
+                button.disabled = true;
+            });
+
+            if (activeButton) {
+                activeButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>' + activeText + '</span>';
+            }
+        });
+
+    if (dashboardNav) {
+        dashboardNav.addEventListener("click", function (event) {
+            event.preventDefault();
+            navigateWithActive(dashboardNav);
+        });
+    }
+
+    if (billingNav) {
+        billingNav.addEventListener("click", function (event) {
+            event.preventDefault();
+            navigateWithActive(billingNav);
+        });
+    }
+
+    if (hmsBrand) {
+        hmsBrand.addEventListener("click", function (event) {
+            event.preventDefault();
+            navigateWithActive(dashboardNav || hmsBrand);
+        });
+    }
+
+    window.addEventListener("pageshow", function () {
+        submitButtons.forEach(function (button) {
+            button.disabled = false;
+        });
+        if (registerPatientBtn) {
+            registerPatientBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Register Patient</span>';
+        }
+        if (savePrintPatientBtn) {
+            savePrintPatientBtn.innerHTML = '<i class="fas fa-print"></i><span>Save &amp; Print</span>';
+        }
+    });
+
+    const pageParams = new URLSearchParams(window.location.search);
+    if (pageParams.get("view") === "all") {
+        showPatientListView(allPatientsNav);
+    } else if (pageParams.get("view") === "list" || pageParams.has("date")) {
+        showPatientListView(patientListNav);
+    } else {
+        showPatientFormView();
+    }
+
+    const patientSuccessToast = document.getElementById("patientSuccessToast");
+    if (patientSuccessToast) {
+        window.setTimeout(function () {
+            patientSuccessToast.classList.add("hide");
+        }, 3500);
+
+        window.setTimeout(function () {
+            patientSuccessToast.remove();
+        }, 4300);
+    }
+
+    newPatientNav.addEventListener("click", function () {
+        showPatientFormView();
+    });
+
+    patientListNav.addEventListener("click", function () {
+        if (pageParams.get("view") === "all") {
+            window.location.href = patientListNav.dataset.listUrl || "/patients-registration?view=list";
+            return;
+        }
+
+        showPatientListView(patientListNav);
+    });
+
+    allPatientsNav.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        if (pageParams.get("view") === "all") {
+            showPatientListView(allPatientsNav);
+            return;
+        }
+
+        window.location.href = allPatientsNav.dataset.allUrl || allPatientsNav.href;
+    });
+
+    const logoutNav = document.getElementById("logoutNav");
+    if (logoutNav) {
+        logoutNav.addEventListener("click", function () {
+            window.location.href = "{{ url_for('logout') }}";
+        });
+    }
+
+ function updatePrintedTimestamp() {
+    const timestampElement = document.getElementById("printedTimestamp");
+    if (!timestampElement) return;
+
+    const now = new Date();
+    const pad = function (value) {
+        return String(value).padStart(2, "0");
+    };
+
+    timestampElement.textContent = now.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+    }) + " " + now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    });
+}
+
+    updatePrintedTimestamp();
+    window.setInterval(updatePrintedTimestamp, 1000);
+
+    const dashboardFooterYear = document.getElementById("dashboardFooterYear");
+if (dashboardFooterYear) {
+  dashboardFooterYear.textContent = new Date().getFullYear();
+
+}
+
+
+document.querySelectorAll('.input-group').forEach(group => {
+    const field = group.querySelector('input, select, textarea');
+    const label = group.querySelector('label');
+
+    if (field && field.required && label) {
+        label.innerHTML += ' <span class="required-star">*</span>';
+    }
+});
+
+    </script>
+
+</body>
+</html>

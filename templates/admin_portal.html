@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_portal.css') }}?v=20260717-1">
+    <title>Admin Portal</title>
+</head>
+<body>
+    <div class="page-glow page-glow-one"></div>
+    <div class="page-glow page-glow-two"></div>
+
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="admin-sidebar" aria-expanded="false">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="sidebar-overlay" aria-hidden="true"></div>
+
+    <div class="portal-shell">
+        <aside class="sidebar" id="admin-sidebar">
+            <div class="brand">
+                <span class="brand-mark"><i class="fa-solid fa-heart-pulse"></i></span>
+                <div><strong>Pulse-HMS</strong><small>Administration</small></div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Administration navigation">
+                <span class="nav-label">Workspace</span>
+                <a href="{{ url_for('admin_portal') }}" class="nav-link active" aria-current="page">
+                    <i class="fa-solid fa-table-cells-large"></i><span>Overview</span>
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="nav-link">
+                    <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('services') }}" class="nav-link">
+                    <i class="fa-solid fa-stethoscope"></i><span>Services</span>
+                </a>
+
+                <span class="nav-label">Administration</span>
+                <a href="{{ url_for('registered_users') }}" class="nav-link">
+                    <i class="fa-solid fa-users-gear"></i><span>Account Management</span>
+                </a>
+                <a href="{{ url_for('register') }}" class="nav-link">
+                    <i class="fa-solid fa-user-plus"></i><span>Add Account</span>
+                </a>
+                <a href="{{ url_for('logs') }}" class="nav-link">
+                    <i class="fa-solid fa-clock-rotate-left"></i><span>Activity Logs</span>
+                </a>
+
+                <span class="nav-label">Operations</span>
+                <a href="{{ url_for('follow_up_dashboard') }}" class="nav-link">
+                    <i class="fa-solid fa-clipboard-check"></i><span>Follow Up</span>
+                </a>
+                <a href="{{ url_for('duty_management_dashboard') }}" class="nav-link">
+                    <i class="fa-solid fa-calendar-check"></i><span>Duty Management</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="secure-status"><i class="fa-solid fa-shield-halved"></i><span><strong>Admin access</strong><small>Secure workspace</small></span></div>
+                <a href="{{ url_for('logout') }}" class="nav-link logout-link">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i><span>Sign out</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header">
+                <div>
+                    <span class="eyebrow">Administration</span>
+                    <h1>Admin Portal</h1>
+                    <p>Manage hospital accounts, services, activity, and daily operations from one secure workspace.</p>
+                </div>
+                <a href="{{ url_for('register') }}" class="button button-primary">
+                    <i class="fa-solid fa-user-plus"></i> Add account
+                </a>
+            </header>
+
+            <section class="welcome-card" aria-labelledby="welcome-heading">
+                <div class="welcome-copy">
+                    <span class="section-icon admin-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                    <div>
+                        <span class="card-kicker">Protected administrator area</span>
+                        <h2 id="welcome-heading">Welcome back</h2>
+                        <p>Choose a workspace below to manage the hospital system. Administrative tools are available only to authorized accounts.</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('registered_users') }}" class="button button-secondary">
+                    Manage accounts <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </section>
+
+            <section class="tools-section" aria-labelledby="tools-heading">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-icon tools-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                        <div><h2 id="tools-heading">Administration tools</h2><p>Frequently used controls and system workspaces.</p></div>
+                    </div>
+                    <span class="count-badge">7 tools</span>
+                </div>
+
+                <div class="tool-grid">
+                    <a href="{{ url_for('registered_users') }}" class="tool-card featured-card">
+                        <span class="tool-icon violet"><i class="fa-solid fa-users-gear"></i></span>
+                        <span class="tool-copy"><strong>Account Management</strong><small>Edit sign-in details, passwords, roles, and employee permissions.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('register') }}" class="tool-card">
+                        <span class="tool-icon blue"><i class="fa-solid fa-user-plus"></i></span>
+                        <span class="tool-copy"><strong>Add Account</strong><small>Create a new administrator or employee account.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('logs') }}" class="tool-card">
+                        <span class="tool-icon amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                        <span class="tool-copy"><strong>Activity Logs</strong><small>Review important account and system activity.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('services') }}" class="tool-card">
+                        <span class="tool-icon cyan"><i class="fa-solid fa-stethoscope"></i></span>
+                        <span class="tool-copy"><strong>Hospital Services</strong><small>Maintain available services and their details.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="tool-card">
+                        <span class="tool-icon green"><i class="fa-solid fa-chart-line"></i></span>
+                        <span class="tool-copy"><strong>Main Dashboard</strong><small>Open the central hospital operations dashboard.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('follow_up_dashboard') }}" class="tool-card">
+                        <span class="tool-icon rose"><i class="fa-solid fa-clipboard-check"></i></span>
+                        <span class="tool-copy"><strong>Patient Follow Up</strong><small>Track and manage scheduled patient follow-ups.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                    <a href="{{ url_for('duty_management_dashboard') }}" class="tool-card">
+                        <span class="tool-icon indigo"><i class="fa-solid fa-calendar-check"></i></span>
+                        <span class="tool-copy"><strong>Duty Management</strong><small>Organize employee duties and work schedules.</small></span>
+                        <span class="card-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const menuToggle = document.querySelector('.menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+
+        function setMenu(open) {
+            document.body.classList.toggle('menu-open', open);
+            menuToggle.setAttribute('aria-expanded', String(open));
+            menuToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+            menuToggle.innerHTML = open ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+        }
+
+        menuToggle.addEventListener('click', function () { setMenu(!document.body.classList.contains('menu-open')); });
+        overlay.addEventListener('click', function () { setMenu(false); });
+        sidebar.querySelectorAll('a').forEach(function (link) { link.addEventListener('click', function () { setMenu(false); }); });
+        document.addEventListener('keydown', function (event) { if (event.key === 'Escape') setMenu(false); });
+    </script>
+</body>
+</html>

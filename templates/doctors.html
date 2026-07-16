@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctors</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/doctors.css') }}">
+</head>
+<body>
+    <div class="background-blobs"></div>
+
+    <main class="doctors-page">
+        <section class="doctors-panel">
+            <div class="doctors-header">
+                <a class="back-btn" href="{{ url_for('dashboard') }}" aria-label="Back to dashboard">
+                    <i class="fas fa-arrow-left"></i>
+                    Back
+                </a>
+
+                <div class="doctors-heading-copy">
+                    <h1><i class="fas fa-user-doctor"></i> Doctors</h1>
+                    <p>Review the registered doctors in the system.</p>
+                </div>
+
+                <div class="header-actions">
+                    {% if can_access_page('add_doctor') %}
+                    <a class="add-doctor-btn" href="{{ url_for('add_doctor') }}">
+                        <i class="fas fa-plus"></i>
+                        Add Doctor
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if message %}
+                <p class="flash-message">{{ message }}</p>
+            {% endif %}
+
+            <div class="doctors-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Specialization</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>License Number</th>
+                            <th>Availability</th>
+                            <th>Experience</th>
+                            <th>Room Number</th>
+                            <th>Doctor Fee</th>
+                            {% if can_access_page('edit_doctor') or can_access_page('delete_doctor') %}
+                            <th>Action</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if doctors %}
+                            {% for doctor in doctors %}
+                            <tr>
+                                <td>{{ doctor[1] }}</td>
+                                <td>{{ doctor[2] }}</td>
+                                <td>{{ doctor[3] }}</td>
+                                <td>{{ doctor[4] }}</td>
+                                <td>{{ doctor[5] }}</td>
+                                <td>{{ doctor[6] }}</td>
+                                <td>{{ doctor[7] }}</td>
+                                <td>{{ doctor[8] }}</td>
+                                <td>{{ doctor[9] }}</td>
+                                <td>{{ doctor[10] }}</td>
+                                <td>Tk {{ '%.2f'|format(doctor[11] or 0) }}</td>
+                                {% if can_access_page('edit_doctor') or can_access_page('delete_doctor') %}
+                                <td>
+                                    <div class="doctor-row-actions">
+                                    {% if can_access_page('edit_doctor') %}
+                                    <a class="edit-doctor-btn" href="{{ url_for('edit_doctor', doctor_id=doctor[0]) }}">
+                                        <i class="fas fa-pen-to-square"></i>
+                                        Edit
+                                    </a>
+                                    {% endif %}
+                                    {% if can_access_page('delete_doctor') %}
+<form class="delete-doctor-form" method="POST" action="{{ url_for('delete_doctor', doctor_id=doctor[0]) }}" data-doctor-name="{{ doctor[1] }}">
+                            {{ csrf_input }}
+                                        <button type="submit" class="delete-doctor-btn">
+                                            <i class="fas fa-trash-can"></i>
+                                            Delete
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    </div>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="{% if can_access_page('edit_doctor') or can_access_page('delete_doctor') %}12{% else %}11{% endif %}">No doctors found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script>
+        document.querySelectorAll(".delete-doctor-form").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                const doctorName = form.dataset.doctorName || "this doctor";
+                if (!window.confirm(`Delete ${doctorName}? This action cannot be undone.`)) {
+                    event.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

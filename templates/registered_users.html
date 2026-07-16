@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registered_users.css') }}?v=20260715-4">
+    <title>Account Management</title>
+</head>
+<body>
+    <div class="page-glow page-glow-one"></div>
+    <div class="page-glow page-glow-two"></div>
+
+    <main class="page-shell">
+        <header class="page-header">
+            <div>
+                <span class="eyebrow">Administration</span>
+                <h1>Account Management</h1>
+                <p>Manage sign-in details, passwords, roles, and employee access from one secure workspace.</p>
+            </div>
+            <nav class="header-actions" aria-label="Account actions">
+                <a href="{{ url_for('register') }}" class="button button-primary">
+                    <i class="fa-solid fa-user-plus"></i> Add account
+                </a>
+                <a href="{{ url_for('admin_portal') }}" class="button button-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Admin portal
+                </a>
+            </nav>
+        </header>
+
+        {% if delete_message %}
+        <div class="notice notice-error" role="alert">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ delete_message }}</span>
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="notice notice-success" role="status">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>{{ success }}</span>
+        </div>
+        {% endif %}
+
+        <section class="account-section" aria-labelledby="admin-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="section-icon admin-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                    <div>
+                        <h2 id="admin-heading">Administrators</h2>
+                        <p>Full access to every hospital management feature.</p>
+                    </div>
+                </div>
+                <span class="count-badge">{{ admins|length }} account{% if admins|length != 1 %}s{% endif %}</span>
+            </div>
+
+            <div class="account-grid">
+                {% for admin in admins %}
+                <article class="account-card admin-card">
+                    <div class="account-summary">
+                        <div class="avatar admin-avatar"><i class="fa-solid fa-user-shield"></i></div>
+                        <div class="identity">
+                            <div class="identity-title">
+                                <h3>{{ admin[1] }}</h3>
+                                <span class="role-badge role-admin">Administrator</span>
+                            </div>
+                            <p><i class="fa-regular fa-envelope"></i> {{ admin[3] or 'No email address' }}</p>
+                        </div>
+                    </div>
+
+                    <details class="edit-panel">
+                        <summary><i class="fa-solid fa-pen-to-square"></i> Edit administrator information</summary>
+                        <form class="account-form" method="post" action="{{ url_for('update_account') }}">
+                            {{ csrf_input }}
+                            <input type="hidden" name="account_type" value="admin">
+                            <input type="hidden" name="account_id" value="{{ admin[0] }}">
+
+                            <div class="form-grid">
+                                <label class="field">
+                                    <span>Username</span>
+                                    <div class="input-wrap">
+                                        <i class="fa-regular fa-user"></i>
+                                        <input name="username" value="{{ admin[1] }}" required autocomplete="username">
+                                    </div>
+                                </label>
+                                <label class="field">
+                                    <span>Email address</span>
+                                    <div class="input-wrap">
+                                        <i class="fa-regular fa-envelope"></i>
+                                        <input type="email" name="email" value="{{ admin[3] or '' }}" autocomplete="email" placeholder="name@example.com">
+                                    </div>
+                                </label>
+                                <label class="field">
+                                    <span>New password</span>
+                                    <div class="input-wrap password-wrap">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <input id="admin-password-{{ admin[0] }}" type="password" name="new_password" minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters">
+                                        <button type="button" class="password-toggle" data-target="admin-password-{{ admin[0] }}" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
+                                    </div>
+                                </label>
+                                <label class="field">
+                                    <span>Confirm new password</span>
+                                    <div class="input-wrap password-wrap">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <input id="admin-confirm-{{ admin[0] }}" type="password" name="confirm_password" minlength="8" autocomplete="new-password" placeholder="Repeat new password">
+                                        <button type="button" class="password-toggle" data-target="admin-confirm-{{ admin[0] }}" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
+                                    </div>
+                                </label>
+                            </div>
+                            <p class="password-help"><i class="fa-solid fa-circle-info"></i> Leave both password fields empty to keep the current password.</p>
+                            <button class="button button-primary save-account" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save changes</button>
+                        </form>
+                    </details>
+
+                    <div class="card-footer">
+                        <span class="access-label"><i class="fa-solid fa-check"></i> All pages enabled</span>
+                        <form method="post" action="{{ url_for('delete_user') }}" onsubmit="return confirm('Delete this administrator account?');">
+                            {{ csrf_input }}
+                            <button class="danger-button" name="delete_admin" value="{{ admin[0] }}"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                        </form>
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state"><i class="fa-solid fa-user-shield"></i><p>No administrator accounts found.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="account-section" aria-labelledby="employee-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="section-icon employee-icon"><i class="fa-solid fa-users"></i></span>
+                    <div>
+                        <h2 id="employee-heading">Employees</h2>
+                        <p>Limited accounts with individually assigned page access.</p>
+                    </div>
+                </div>
+                <span class="count-badge">{{ users|length }} account{% if users|length != 1 %}s{% endif %}</span>
+            </div>
+
+            <div class="account-grid">
+                {% for user in users %}
+                <article class="account-card employee-card">
+                    <div class="account-summary">
+                        <div class="avatar employee-avatar"><i class="fa-solid fa-user"></i></div>
+                        <div class="identity">
+                            <div class="identity-title">
+                                <h3>{{ user[1] }}</h3>
+                                <span class="role-badge role-employee">Employee</span>
+                            </div>
+                            <p><i class="fa-regular fa-envelope"></i> {{ user[3] or 'No email address' }}</p>
+                        </div>
+                    </div>
+
+                    <details class="edit-panel">
+                        <summary><i class="fa-solid fa-pen-to-square"></i> Edit employee information</summary>
+                        <form class="account-form" method="post" action="{{ url_for('update_account') }}">
+                            {{ csrf_input }}
+                            <input type="hidden" name="account_type" value="user">
+                            <input type="hidden" name="account_id" value="{{ user[0] }}">
+                            <div class="form-grid">
+                                <label class="field"><span>Username</span><div class="input-wrap"><i class="fa-regular fa-user"></i><input name="username" value="{{ user[1] }}" required autocomplete="username"></div></label>
+                                <label class="field"><span>Email address</span><div class="input-wrap"><i class="fa-regular fa-envelope"></i><input type="email" name="email" value="{{ user[3] or '' }}" autocomplete="email" placeholder="name@example.com"></div></label>
+                                <label class="field"><span>New password</span><div class="input-wrap password-wrap"><i class="fa-solid fa-lock"></i><input id="user-password-{{ user[0] }}" type="password" name="new_password" minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters"><button type="button" class="password-toggle" data-target="user-password-{{ user[0] }}" aria-label="Show password"><i class="fa-regular fa-eye"></i></button></div></label>
+                                <label class="field"><span>Confirm new password</span><div class="input-wrap password-wrap"><i class="fa-solid fa-lock"></i><input id="user-confirm-{{ user[0] }}" type="password" name="confirm_password" minlength="8" autocomplete="new-password" placeholder="Repeat new password"><button type="button" class="password-toggle" data-target="user-confirm-{{ user[0] }}" aria-label="Show password"><i class="fa-regular fa-eye"></i></button></div></label>
+                            </div>
+                            <p class="password-help"><i class="fa-solid fa-circle-info"></i> Leave both password fields empty to keep the current password.</p>
+                            <button class="button button-primary save-account" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save changes</button>
+                        </form>
+                    </details>
+
+                    <details class="permission-panel">
+                        <summary><span><i class="fa-solid fa-key"></i> Manage page permissions</span><span class="permission-total"><b class="permission-count">{{ user_permissions.get(user[0], [])|length }}</b> / {{ page_options|length }}</span></summary>
+                        <form class="permission-form" method="post" action="{{ url_for('update_user_permissions') }}">
+                            {{ csrf_input }}
+                            <input type="hidden" name="user_id" value="{{ user[0] }}">
+                            <div class="permission-toolbar"><strong>Allowed pages</strong><div><button type="button" class="permission-select-all">Select all</button><button type="button" class="permission-clear-all">Clear all</button></div></div>
+                            <div class="permission-groups">
+                                {% for group in permission_groups %}
+                                <fieldset class="permission-group">
+                                    <legend><span>{{ group.name }}</span><button type="button" class="permission-group-toggle">Toggle group</button></legend>
+                                    <div class="permission-list">
+                                        {% for page in group.pages %}
+                                        <label><input type="checkbox" name="page_permissions" value="{{ page.key }}" {% if page.key in user_permissions.get(user[0], []) %}checked{% endif %}><i class="{{ page.icon }}"></i><span>{{ page.label }}{% if page.nav is defined and not page.nav %}<small>Detail / print page</small>{% endif %}</span></label>
+                                        {% endfor %}
+                                    </div>
+                                </fieldset>
+                                {% endfor %}
+                            </div>
+                            <button class="button button-primary" type="submit"><i class="fa-solid fa-key"></i> Update permissions</button>
+                        </form>
+                    </details>
+
+                    <div class="card-footer">
+                        <span class="access-label"><i class="fa-solid fa-key"></i> Custom access</span>
+                        <form method="post" action="{{ url_for('delete_user') }}" onsubmit="return confirm('Delete this employee account?');">
+                            {{ csrf_input }}
+                            <button class="danger-button" name="delete_user" value="{{ user[0] }}"><i class="fa-regular fa-trash-can"></i> Delete</button>
+                        </form>
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state"><i class="fa-solid fa-users"></i><p>No employee accounts found.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.querySelectorAll('.password-toggle').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const input = document.getElementById(button.dataset.target);
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                button.innerHTML = showing ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+                button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            });
+        });
+
+        document.querySelectorAll('.permission-form').forEach(function (form) {
+            const checkboxes = Array.from(form.querySelectorAll('input[name="page_permissions"]'));
+            const count = form.closest('.permission-panel').querySelector('.permission-count');
+            const updateCount = function () { count.textContent = checkboxes.filter(function (box) { return box.checked; }).length; };
+            form.querySelector('.permission-select-all').addEventListener('click', function () { checkboxes.forEach(function (box) { box.checked = true; }); updateCount(); });
+            form.querySelector('.permission-clear-all').addEventListener('click', function () { checkboxes.forEach(function (box) { box.checked = false; }); updateCount(); });
+            form.querySelectorAll('.permission-group-toggle').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const boxes = Array.from(button.closest('.permission-group').querySelectorAll('input[name="page_permissions"]'));
+                    const select = boxes.some(function (box) { return !box.checked; });
+                    boxes.forEach(function (box) { box.checked = select; });
+                    updateCount();
+                });
+            });
+            checkboxes.forEach(function (box) { box.addEventListener('change', updateCount); });
+        });
+    </script>
+</body>
+</html>

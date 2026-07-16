@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/doctor_prescription_list.css') }}?v=20260715-2">
+</head>
+<body>
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<main class="library-page">
+    <header class="library-header">
+        <div class="title-row">
+            <a href="{{ url_for('doctor_prescription') }}" class="icon-button" aria-label="Back to prescription editor"><i class="fas fa-arrow-left"></i></a>
+            <div><p>Clinical records</p><h1>Prescription Library</h1><span>Review every prescription in a full clinical-sheet preview.</span></div>
+        </div>
+        <div class="header-tools">
+            <div class="count-card"><i class="fas fa-file-prescription"></i><div><span>Total records</span><strong>{{ prescriptions|length }}</strong></div></div>
+            <a href="{{ url_for('doctor_prescription') }}" class="new-button"><i class="fas fa-plus"></i> New prescription</a>
+        </div>
+    </header>
+
+    <form class="filters" method="GET">
+        <label class="search-field"><i class="fas fa-magnifying-glass"></i><input name="q" value="{{ keyword }}" placeholder="Search patient, UHID, phone, doctor, prescription number"></label>
+        <label class="date-field"><i class="fas fa-calendar"></i><input type="date" name="date" value="{{ selected_date }}"></label>
+        <button><i class="fas fa-filter"></i> Apply filters</button>
+        {% if keyword or selected_date %}<a href="{{ url_for('doctor_prescription_list') }}"><i class="fas fa-xmark"></i> Clear</a>{% endif %}
+    </form>
+
+    <section class="prescription-library">
+        {% for item in prescriptions %}
+        <article class="record-card">
+            <header class="record-header">
+                <div>
+                    <span class="status-badge {{ item.status|lower }}"><i class="fas {{ 'fa-pen-ruler' if item.status == 'Draft' else 'fa-circle-check' }}"></i> {{ item.status }}</span>
+                    <div><strong>{{ item.prescription_no }}</strong><small>{{ format_date_display(item.date) }}</small></div>
+                </div>
+                <div class="record-actions">
+                    {% if item.view_url %}<a class="secondary-action" href="{{ item.view_url }}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Full sheet</a>{% endif %}
+                    {% if item.new_url %}<a class="primary-action" href="{{ item.new_url }}"><i class="fas {{ 'fa-pen-to-square' if item.status == 'Draft' and item.today_patient_id == item.patient_id else 'fa-plus' }}"></i> {{ 'Resume draft' if item.status == 'Draft' and item.today_patient_id == item.patient_id else 'New visit Rx' }}</a>{% endif %}
+                </div>
+            </header>
+
+            <div class="sheet-stage">
+                <article class="mini-prescription-sheet">
+                    <header class="sheet-header">
+                        <div class="hospital-brand">
+                            <img src="{{ url_for('assets', filename='logo.png') }}" alt="Hospital logo">
+                            <div><h2>AL-JUMIRA HOSPITAL</h2><p>Mother, Child & Infertility Healthcare Centre</p><small>Professional Doctor Prescription</small></div>
+                        </div>
+                        <div class="doctor-brand">
+                            <strong>{{ item.doctor_name }}</strong>
+                            <span>{{ item.designation or 'Medical Officer' }}{% if item.specialization %} · {{ item.specialization }}{% endif %}</span>
+                            <small>{% if item.department %}{{ item.department }}{% endif %}{% if item.license_number %} · Reg: {{ item.license_number }}{% endif %}{% if item.room_number %} · Room {{ item.room_number }}{% endif %}</small>
+                        </div>
+                    </header>
+
+                    <section class="patient-strip">
+                        <div><span>Patient</span><strong>{{ item.patient_name }}</strong><small>{{ item.patient_age }} {{ item.patient_age_unit }} · {{ item.patient_gender }} · {{ item.phone }}</small></div>
+                        <div><span>UHID / Ticket</span><strong>{{ format_uhid(item.uhid) }}</strong><small>Ticket {{ item.ticket or '-' }}</small></div>
+                        <div><span>Date</span><strong>{{ format_date_display(item.date) }}</strong><small>{{ item.prescription_no }}</small></div>
+                    </section>
+
+                    <section class="vitals-strip">
+                        <span><b>BP</b>{{ item.vitals.bp or '-' }}</span>
+                        <span><b>Pulse</b>{{ item.vitals.pulse or '-' }}</span>
+                        <span><b>Temp</b>{{ item.vitals.temperature or '-' }}</span>
+                        <span><b>Weight</b>{{ item.vitals.weight or '-' }}</span>
+                    </section>
+
+                    <div class="sheet-content">
+                        <aside class="clinical-notes">
+                            <section><h3>C/C</h3><p>{{ item.clinical.complaints or '-' }}</p></section>
+                            <section><h3>O/E</h3><p>{{ item.clinical.findings or '-' }}</p></section>
+                            <section><h3>Diagnosis</h3><p>{{ item.clinical.diagnosis or '-' }}</p></section>
+                            <section><h3>Investigations</h3><p>{{ item.clinical.investigations or '-' }}</p></section>
+                        </aside>
+                        <section class="medicine-sheet">
+                            <h3>Rx</h3>
+                            <ol>
+                                {% for medicine in item.medicines %}
+                                <li><strong>{{ medicine.name or '-' }}</strong><span>{{ medicine.dose or '-' }}{% if medicine.duration %} · {{ medicine.duration }}{% endif %}{% if medicine.instruction %} · {{ medicine.instruction }}{% endif %}</span></li>
+                                {% else %}<li class="empty-medicine">No medicine added.</li>{% endfor %}
+                            </ol>
+                        </section>
+                    </div>
+
+                    <section class="advice-strip">
+                        <div><h3>Advice</h3><p>{{ item.clinical.advice or '-' }}</p></div>
+                        <div><h3>Follow-up</h3><p>{{ item.clinical.followup or '-' }}</p></div>
+                    </section>
+                    <footer class="sheet-footer"><span>Prepared by {{ item.created_by }}</span><strong>Doctor Signature</strong></footer>
+                </article>
+            </div>
+
+            <footer class="record-footer">
+                <span><i class="fas fa-pills"></i> {{ item.medicine_count }} medicine{{ '' if item.medicine_count == 1 else 's' }}</span>
+                <span><i class="fas fa-clock-rotate-left"></i> {{ item.prescription_count }} saved for this patient</span>
+                {% if not item.new_url %}<span class="no-visit"><i class="fas fa-circle-info"></i> No registered visit today</span>{% endif %}
+            </footer>
+        </article>
+        {% else %}
+        <div class="empty-state"><i class="fas fa-folder-open"></i><h2>No prescriptions found</h2><p>Saved prescriptions and drafts will appear here as clinical sheets.</p><a href="{{ url_for('doctor_prescription') }}">Create prescription</a></div>
+        {% endfor %}
+    </section>
+</main>
+</body>
+</html>

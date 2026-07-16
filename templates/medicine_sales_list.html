@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medicine Sales List</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/medicine_sales_list.css') }}?v=3">
+</head>
+<body>
+<aside class="sidebar">
+	<div class="brand">
+		<a href="{{ url_for('dashboard') }}" class="brand-link">
+			<img src="{{ url_for('assets', filename='logo.png') }}" alt="AJH Logo" class="brand-logo">
+			<span class="brand-text">AJH</span>
+		</a>
+	</div>
+
+	<ul class="nav-list">
+		{% if can_access_page('dashboard') %}
+		<li><a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+		{% endif %}
+		<li class="medicine-menu open" id="medicineMenu">
+			<button class="medicine-toggle" type="button" id="medicineToggle" aria-expanded="true">
+				<i class="fas fa-pills"></i>
+				<span>Medicine</span>
+				<i class="fas fa-chevron-down dropdown-icon"></i>
+			</button>
+			<div class="sub-nav">
+				{% if admin %}
+				<a class="sub-link" href="{{ url_for('medicine_stock_dashboard') }}"><i class="fas fa-boxes-stacked"></i> Stock</a>
+				{% endif %}
+				{% if can_access_page('medicine_sales') %}
+				<a class="sub-link" href="{{ url_for('medicine_sales') }}"><i class="fas fa-cash-register"></i> Sales</a>
+				{% endif %}
+				{% if can_access_page('medicine_sales_list') %}
+				<a class="sub-link active" href="{{ url_for('medicine_sales_list') }}"><i class="fas fa-calendar-days"></i> Sales List</a>
+				{% endif %}
+				{% if can_access_page('medicine_monthly_report') or can_access_page('medicine_sales') or can_access_page('medicine_sales_list') %}
+				<a class="sub-link" href="{{ url_for('medicine_monthly_report') }}"><i class="fas fa-chart-column"></i> Monthly Report</a>
+				{% endif %}
+				{% if can_access_page('medicine_return') or can_access_page('medicine_sales') or can_access_page('medicine_sales_list') %}
+				<a class="sub-link" href="{{ url_for('medicine_return') }}"><i class="fas fa-rotate-left"></i> Medi Return</a>
+				{% endif %}
+			</div>
+		</li>
+	</ul>
+</aside>
+
+<main class="content">
+	<header class="top-header">
+		<div class="title-group">
+			<p class="eyebrow"><i class="fas fa-calendar-days"></i> Pharmacy Register</p>
+			<h1>Medicine Sales List</h1>
+			<h2>Review saved pharmacy invoices by date with item-level sale details.</h2>
+		</div>
+		<div class="profile">
+			<button class="admin-btn" id="adminBtn" type="button">
+				<i class="fas fa-user-circle"></i>
+				{{ profile_name }}
+				<i class="fas fa-chevron-down chevron"></i>
+			</button>
+			<div class="admin-dropdown" id="adminDropdown">
+				<a href="{{ url_for('dashboard') }}"><i class="fas fa-house"></i> Dashboard</a>
+				<a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+			</div>
+		</div>
+	</header>
+
+	<form class="filter-form" method="GET" action="{{ url_for('medicine_sales_list') }}">
+		<label for="salesDate">
+			Sales Date
+			<input id="salesDate" type="date" name="date" value="{{ selected_date }}" required>
+		</label>
+		<div class="filter-actions">
+			<button class="filter-btn" type="submit"><i class="fas fa-filter"></i> View Sales</button>
+			<a class="print-btn" href="{{ url_for('medicine_sales_list_print', date=selected_date) }}" target="_blank" rel="opener" onclick="return openSalesListPrint(event, this.href)"><i class="fas fa-print"></i> Print List</a>
+		</div>
+	</form>
+
+	<section class="summary-grid">
+		<div class="summary-card">
+			<div>
+				<span>Medicine Sales</span>
+				<strong>{{ sales_count }}</strong>
+			</div>
+			<i class="fas fa-receipt"></i>
+		</div>
+		<div class="summary-card">
+			<div>
+				<span>Net Sales</span>
+				<strong>Tk {{ '%.2f'|format(total_sales) }}</strong>
+			</div>
+			<i class="fas fa-sack-dollar"></i>
+		</div>
+		<div class="summary-card return-card">
+			<div>
+				<span>Returned</span>
+				<strong>Tk {{ '%.2f'|format(total_returns) }}</strong>
+			</div>
+			<i class="fas fa-rotate-left"></i>
+		</div>
+		<div class="summary-card">
+			<div>
+				<span>Due</span>
+				<strong>Tk {{ '%.2f'|format(total_due) }}</strong>
+			</div>
+			<i class="fas fa-file-invoice-dollar"></i>
+		</div>
+	</section>
+
+	<section class="sales-stack">
+		{% if returns %}
+			<article class="sale-card return-list-card">
+				<div class="sale-head">
+					<div class="invoice">
+						<strong>Medicine Returns</strong>
+						<span>Returned stock and deducted report totals for {{ format_date_display(selected_date) }}</span>
+					</div>
+					<div class="metric">
+						<span>Return Count</span>
+						<strong>{{ returns|length }}</strong>
+					</div>
+					<div class="metric">
+						<span>Total Return</span>
+						<strong>Tk {{ '%.2f'|format(total_returns) }}</strong>
+					</div>
+					<div class="sale-actions">
+						<a class="print-invoice-btn" href="{{ url_for('medicine_return') }}"><i class="fas fa-rotate-left"></i> Return</a>
+					</div>
+				</div>
+				<div class="table-wrap">
+					<table class="items-table">
+						<thead>
+							<tr>
+								<th>Return No</th>
+								<th>Invoice</th>
+								<th>Customer</th>
+								<th>Reason</th>
+								<th>Amount</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for item in returns %}
+							<tr>
+								<td>{{ item.return_no }}</td>
+								<td>{{ item.invoice_no }}</td>
+								<td>{{ item.customer_name }}{% if item.customer_phone %} | {{ item.customer_phone }}{% endif %}</td>
+								<td>{{ item.reason or '-' }}</td>
+								<td>Tk {{ '%.2f'|format(item.refund_amount) }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</article>
+		{% endif %}
+
+		{% if sales %}
+			{% for sale in sales %}
+			<article class="sale-card">
+				<div class="sale-head">
+					<div class="invoice">
+						<strong>{{ sale.invoice_no }}</strong>
+						<span>Sale ID: {{ sale.id }}</span>
+						<span>{{ sale.customer_name }}{% if sale.customer_phone %} | {{ sale.customer_phone }}{% endif %}</span>
+						{% if sale.customer_address %}
+						<span>{{ sale.customer_address }}</span>
+						{% endif %}
+						<small>{{ format_date_display(sale.created_at) }} | {{ sale.payment_type }}</small>
+					</div>
+					<div class="metric">
+						<span>Subtotal</span>
+						<strong>Tk {{ '%.2f'|format(sale.subtotal) }}</strong>
+					</div>
+					<div class="metric">
+						<span>Discount</span>
+						<strong>Tk {{ '%.2f'|format(sale.discount_amount) }}</strong>
+					</div>
+					<div class="metric">
+						<span>Total</span>
+						<strong>Tk {{ '%.2f'|format(sale.grand_total) }}</strong>
+					</div>
+					<div class="metric">
+						<span>Due</span>
+						<strong>Tk {{ '%.2f'|format(sale.due_amount) }}</strong>
+					</div>
+					<div class="sale-actions">
+						<a class="print-invoice-btn" href="{{ url_for('medicine_sales_print', sale_id=sale.id) }}"><i class="fas fa-print"></i> Print</a>
+						{% if admin %}
+<form class="delete-sale-form" method="POST" action="{{ url_for('delete_medicine_sale', sale_id=sale.id) }}" onsubmit="return confirm('Delete this sale record? This will also remove the matching stock deduction.');">
+                                        {{ csrf_input }}
+							<input type="hidden" name="selected_date" value="{{ selected_date }}">
+							<button class="delete-sale-btn" type="submit"><i class="fas fa-trash"></i> Delete</button>
+						</form>
+						{% endif %}
+					</div>
+				</div>
+				<div class="table-wrap">
+					<table class="items-table">
+						<thead>
+							<tr>
+								<th>Medicine</th>
+								<th>Batch</th>
+								<th>Unit</th>
+								<th>Qty</th>
+								<th>Price</th>
+								<th>Discount</th>
+								<th>Total</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for item in sale['items'] %}
+							<tr>
+								<td>{{ item.medicine_name }}</td>
+								<td>{{ item.batch_no }}</td>
+								<td>{{ item.unit_type|title }}</td>
+								<td>{{ item.quantity }}</td>
+								<td>Tk {{ '%.2f'|format(item.unit_price) }}</td>
+								<td>Tk {{ '%.2f'|format(item.discount) }}</td>
+								<td>Tk {{ '%.2f'|format(item.line_total) }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</article>
+			{% endfor %}
+		{% else %}
+			<div class="empty-state">
+				<strong>No medicine sales found</strong>
+				<span>Choose another date or save a sale from the Medicine Sales page.</span>
+			</div>
+		{% endif %}
+	</section>
+</main>
+
+<script>
+const medicineToggle = document.getElementById('medicineToggle');
+const medicineMenu = document.getElementById('medicineMenu');
+const adminBtn = document.getElementById('adminBtn');
+const adminDropdown = document.getElementById('adminDropdown');
+const chevron = document.querySelector('.chevron');
+
+if (medicineToggle && medicineMenu) {
+	medicineToggle.addEventListener('click', function () {
+		medicineMenu.classList.toggle('open');
+		medicineToggle.setAttribute('aria-expanded', medicineMenu.classList.contains('open'));
+	});
+}
+
+if (adminBtn && adminDropdown && chevron) {
+	adminBtn.addEventListener('click', function () {
+		adminDropdown.classList.toggle('show');
+		chevron.classList.toggle('rotate');
+	});
+
+	window.addEventListener('click', function (event) {
+		if (!document.querySelector('.profile').contains(event.target)) {
+			adminDropdown.classList.remove('show');
+			chevron.classList.remove('rotate');
+		}
+	});
+}
+
+function openSalesListPrint(event, printUrl) {
+	if (event) {
+		event.preventDefault();
+	}
+
+	const printWindow = window.open(printUrl, 'medicineSalesListPrint');
+	if (printWindow) {
+		printWindow.focus();
+	} else {
+		window.location.href = printUrl;
+	}
+
+	return false;
+}
+</script>
+</body>
+</html>

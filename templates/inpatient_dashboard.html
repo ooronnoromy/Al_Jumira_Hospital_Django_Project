@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admitted Patients Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/inpatient_dashboard.css') }}?v=20260716">
+</head>
+<body>
+    <div class="background-blobs"></div>
+    <main class="inpatient-page">
+        <header class="page-header glass-card">
+            <a class="brand" href="{{ url_for('dashboard') }}"><span><i class="fas fa-hospital"></i></span><div><strong>AL-JUMIRA HOSPITAL</strong><small>Inpatient Clinical Command</small></div></a>
+            <div class="header-title"><span class="eyebrow"><i class="fas fa-heart-pulse"></i> Live inpatient care</span><h1>Admitted Patients Management</h1><p>Medical review, doctor rounds, medicine and investigation orders.</p></div>
+            <nav class="header-actions"><a href="{{ url_for('admissions') }}" class="soft-btn"><i class="fas fa-bed-pulse"></i> Admission</a><a href="{{ url_for('dashboard') }}" class="soft-btn"><i class="fas fa-table-cells-large"></i> Dashboard</a><div class="profile-chip"><span>{{ profile_name[:1]|upper }}</span><div><small>Signed in as</small><strong>{{ profile_name }}</strong></div></div></nav>
+        </header>
+
+        {% if success %}<div class="toast success" role="status"><i class="fas fa-circle-check"></i><span>{{ success }}</span><button type="button" aria-label="Dismiss"><i class="fas fa-xmark"></i></button></div>{% endif %}
+        {% if message %}<div class="toast error" role="alert"><i class="fas fa-triangle-exclamation"></i><span>{{ message }}</span><button type="button" aria-label="Dismiss"><i class="fas fa-xmark"></i></button></div>{% endif %}
+
+        <section class="summary-grid" aria-label="Inpatient summary">
+            <article class="summary-card glass-card"><span class="summary-icon blue"><i class="fas fa-hospital-user"></i></span><div><small>Currently admitted</small><strong>{{ total_admitted }}</strong><p>Active inpatient census</p></div></article>
+            <article class="summary-card glass-card"><span class="summary-icon cyan"><i class="fas fa-bed"></i></span><div><small>Occupied beds</small><strong>{{ active_wards }}</strong><p>Rooms and ward beds</p></div></article>
+            <article class="summary-card glass-card"><span class="summary-icon amber"><i class="fas fa-flask-vial"></i></span><div><small>Pending tests</small><strong>{{ pending_tests }}</strong><p>Ordered investigations</p></div></article>
+            <article class="summary-card glass-card clinical-status"><span class="pulse-dot"></span><div><small>Clinical workspace</small><strong>Online</strong><p>{{ format_date_display(today) }}</p></div></article>
+        </section>
+
+        <div class="clinical-layout">
+            <aside class="patient-rail glass-card">
+                <div class="rail-heading"><div><span>Patient census</span><h2>Admitted Patients</h2></div><b>{{ total_admitted }}</b></div>
+                <label class="patient-search"><i class="fas fa-search"></i><input type="search" id="patientSearch" placeholder="Search UHID, name, bed"><button type="button" id="clearPatientSearch" aria-label="Clear"><i class="fas fa-xmark"></i></button></label>
+                <div class="patient-list" id="patientList">
+                    {% for item in admitted_patients %}
+                    <a href="{{ url_for('inpatient_patient_workspace', admission_id=item.id) }}" class="patient-card {{ 'active' if patient and patient.id == item.id else '' }}" data-search="{{ item.uhid }} {{ item.name }} {{ item.phone }} {{ item.room_number }} {{ item.bed_number }} {{ item.doctor_name }}">
+                        <span class="patient-avatar">{{ item.name[:1]|upper }}</span>
+                        <div class="patient-card-info"><div><strong>{{ item.name }}</strong><span class="status-dot"></span></div><small>UHID {{ format_uhid(item.uhid) }} · {{ item.age }} {{ item.age_unit }}</small><p><i class="fas fa-bed"></i> {{ item.room_number or item.bed_number or 'Unassigned' }} <span>·</span> {{ item.doctor_name }}</p></div>
+                        <span class="patient-arrow"><i class="fas fa-chevron-right"></i></span>
+                        <div class="patient-flags"><span title="Rounds"><i class="fas fa-stethoscope"></i>{{ item.round_count }}</span><span title="Active medicine"><i class="fas fa-pills"></i>{{ item.medicine_count }}</span><span class="{{ 'alert' if item.pending_test_count else '' }}" title="Pending tests"><i class="fas fa-vial"></i>{{ item.pending_test_count }}</span></div>
+                    </a>
+                    {% else %}<div class="rail-empty"><i class="fas fa-bed"></i><h3>No admitted patients</h3><p>New admissions will appear here automatically.</p><a href="{{ url_for('admissions') }}">Open admission</a></div>{% endfor %}
+                    <div class="rail-empty" id="searchEmpty" hidden><i class="fas fa-user-slash"></i><h3>No patient found</h3><p>Try another name, UHID or bed number.</p></div>
+                </div>
+            </aside>
+
+            <section class="workspace">
+                {% if patient %}
+                <article class="patient-banner glass-card">
+                    <div class="banner-main"><span class="large-avatar">{{ patient.name[:1]|upper }}</span><div><div class="banner-name"><h2>{{ patient.name }}</h2><span><i class="fas fa-circle"></i> Admitted</span></div><p>UHID {{ format_uhid(patient.uhid) }} · {{ patient.age }} {{ patient.age_unit }} · {{ patient.gender }} · {{ patient.blood_group or 'Blood group N/A' }}</p><div class="banner-contact"><span><i class="fas fa-phone"></i>{{ patient.phone or 'No phone' }}</span><span><i class="fas fa-location-dot"></i>{{ patient.address or 'No address' }}</span></div></div></div>
+                    <div class="bed-identity"><small>Current location</small><strong><i class="fas fa-bed"></i>{{ patient.room_number or patient.bed_number or 'Unassigned' }}</strong><span>{{ patient.ward or 'Inpatient ward' }}</span></div>
+                    <div class="banner-actions"><button type="button" class="primary-action" data-open-tab="rounds"><i class="fas fa-stethoscope"></i> Record round</button><button type="button" class="icon-action" onclick="window.print()" aria-label="Print patient summary"><i class="fas fa-print"></i></button></div>
+                </article>
+
+                <nav class="workspace-tabs glass-card" aria-label="Clinical sections">
+                    <button type="button" class="active" data-tab="overview"><i class="fas fa-notes-medical"></i><span>Medical Overview</span></button>
+                    <button type="button" data-tab="rounds"><i class="fas fa-stethoscope"></i><span>Doctor Rounds</span><b>{{ rounds|length }}</b></button>
+                    <button type="button" data-tab="medications"><i class="fas fa-pills"></i><span>Medicines</span><b>{{ medications|length }}</b></button>
+                    <button type="button" data-tab="tests"><i class="fas fa-flask-vial"></i><span>Tests</span><b>{{ test_orders|length }}</b></button>
+                </nav>
+
+                <div class="tab-panel active" data-panel="overview">
+                    <div class="overview-grid">
+                        <article class="info-card glass-card wide"><div class="card-heading"><span class="card-icon red"><i class="fas fa-file-waveform"></i></span><div><small>Reason for admission</small><h3>Presenting condition</h3></div></div><p class="clinical-copy">{{ patient.reason or 'No admission reason recorded.' }}</p>{% if patient.notes %}<div class="note-box"><strong>Admission note</strong><p>{{ patient.notes }}</p></div>{% endif %}</article>
+                        <article class="info-card glass-card"><div class="card-heading"><span class="card-icon blue"><i class="fas fa-user-doctor"></i></span><div><small>Consultant</small><h3>Assigned doctor</h3></div></div><strong class="primary-value">{{ patient.doctor_name }}</strong><p>{{ patient.doctor_designation or 'Clinical team' }}</p></article>
+                        <article class="info-card glass-card"><div class="card-heading"><span class="card-icon cyan"><i class="fas fa-calendar-check"></i></span><div><small>Admission</small><h3>Stay details</h3></div></div><dl><div><dt>Admitted</dt><dd>{{ format_date_display(patient.admission_date) }}</dd></div><div><dt>Bed</dt><dd>{{ patient.room_number or patient.bed_number or '-' }}</dd></div></dl></article>
+                        <article class="info-card glass-card wide"><div class="card-heading"><span class="card-icon violet"><i class="fas fa-book-medical"></i></span><div><small>Known conditions</small><h3>Medical history</h3></div></div><p class="clinical-copy">{{ patient.medical_history or 'No previous medical history recorded in patient registration.' }}</p></article>
+                        <article class="info-card glass-card"><div class="card-heading"><span class="card-icon amber"><i class="fas fa-user-shield"></i></span><div><small>Care contact</small><h3>Guardian</h3></div></div><strong class="primary-value">{{ patient.guardian_name or 'Not provided' }}</strong><p>{{ patient.guardian_relation or '-' }} · {{ patient.emergency_contact_phone or 'No phone' }}</p></article>
+                        <article class="info-card glass-card"><div class="card-heading"><span class="card-icon green"><i class="fas fa-address-card"></i></span><div><small>Patient profile</small><h3>Medical identifiers</h3></div></div><dl><div><dt>Date of birth</dt><dd>{{ patient.dob or '-' }}</dd></div><div><dt>Blood group</dt><dd>{{ patient.blood_group or '-' }}</dd></div><div><dt>Gender</dt><dd>{{ patient.gender }}</dd></div></dl></article>
+                    </div>
+                </div>
+
+                <div class="tab-panel" data-panel="rounds">
+                    <div class="split-panel">
+                        <article class="clinical-form-card glass-card"><div class="section-heading"><span class="card-icon blue"><i class="fas fa-stethoscope"></i></span><div><small>New clinical entry</small><h2>Record Doctor Round</h2><p>Capture current vitals, observation, assessment and plan.</p></div></div>
+                            <form method="POST" action="{{ url_for('add_inpatient_round', admission_id=patient.id) }}" class="clinical-form">{{ csrf_input }}
+                                <div class="form-grid"><label><span>Round date</span><input type="date" name="round_date" value="{{ today }}" required></label><label><span>Round time</span><input type="time" name="round_time"></label><label class="full"><span>Doctor</span><select name="doctor_id"><option value="">Assigned doctor / signed-in clinician</option>{% for doctor in doctors %}<option value="{{ doctor[0] }}" {{ 'selected' if patient.doctor_id == doctor[0] else '' }}>{{ doctor[1] }} · {{ doctor[2] }}</option>{% endfor %}</select></label></div>
+                                <fieldset class="vital-fieldset"><legend>Current vitals</legend><div class="vitals-grid"><label><span>BP</span><input name="blood_pressure" placeholder="120/80"></label><label><span>Temp °F</span><input name="temperature" placeholder="98.6"></label><label><span>Pulse</span><input name="pulse" placeholder="72 bpm"></label><label><span>Resp.</span><input name="respiratory_rate" placeholder="16/min"></label><label><span>SpO₂</span><input name="spo2" placeholder="98%"></label></div></fieldset>
+                                <label><span>Clinical observation *</span><textarea name="clinical_observation" rows="4" placeholder="Patient condition, symptoms, response to treatment..." required></textarea></label><label><span>Assessment / diagnosis</span><textarea name="assessment" rows="3" placeholder="Working assessment or clinical impression"></textarea></label><label><span>Care plan</span><textarea name="care_plan" rows="3" placeholder="Plan, monitoring instructions and next review"></textarea></label>
+                                <button type="submit" class="submit-btn"><i class="fas fa-floppy-disk"></i> Save doctor round</button>
+                            </form>
+                        </article>
+                        <article class="timeline-card glass-card"><div class="list-heading"><div><small>Longitudinal record</small><h2>Round Timeline</h2></div><span>{{ rounds|length }} entries</span></div><div class="timeline">{% for round in rounds %}<article class="timeline-entry"><span class="timeline-marker"><i class="fas fa-user-doctor"></i></span><div class="timeline-content"><header><div><strong>{{ round.doctor_name }}</strong><small>{{ format_date_display(round.round_date) }} · {{ round.round_time or 'Time not recorded' }}</small></div><span>Round #{{ round.id }}</span></header><div class="vital-chips">{% if round.blood_pressure %}<span>BP {{ round.blood_pressure }}</span>{% endif %}{% if round.temperature %}<span>{{ round.temperature }}°F</span>{% endif %}{% if round.pulse %}<span>Pulse {{ round.pulse }}</span>{% endif %}{% if round.spo2 %}<span>SpO₂ {{ round.spo2 }}</span>{% endif %}</div><section><small>Observation</small><p>{{ round.clinical_observation }}</p></section>{% if round.assessment %}<section><small>Assessment</small><p>{{ round.assessment }}</p></section>{% endif %}{% if round.care_plan %}<section class="plan"><small>Care plan</small><p>{{ round.care_plan }}</p></section>{% endif %}</div></article>{% else %}<div class="content-empty"><i class="fas fa-stethoscope"></i><h3>No doctor rounds recorded</h3><p>The first clinical round will appear here.</p></div>{% endfor %}</div></article>
+                    </div>
+                </div>
+
+                <div class="tab-panel" data-panel="medications">
+                    <div class="split-panel medicine-layout"><article class="clinical-form-card glass-card"><div class="section-heading"><span class="card-icon green"><i class="fas fa-pills"></i></span><div><small>Inpatient medication order</small><h2>Add Medicine</h2><p>This order belongs only to the current admission.</p></div></div><form method="POST" action="{{ url_for('add_inpatient_medication', admission_id=patient.id) }}" class="clinical-form">{{ csrf_input }}<label><span>Medicine name *</span><input name="medicine_name" placeholder="Generic or brand name" required></label><div class="form-grid"><label><span>Dose *</span><input name="dose" placeholder="e.g. 500 mg" required></label><label><span>Route *</span><select name="route"><option>Oral</option><option>IV</option><option>IM</option><option>SC</option><option>Inhalation</option><option>Topical</option><option>Other</option></select></label><label><span>Frequency *</span><select name="frequency" required><option value="">Select frequency</option><option>Once daily</option><option>Twice daily</option><option>Three times daily</option><option>Four times daily</option><option>Every 4 hours</option><option>Every 6 hours</option><option>Every 8 hours</option><option>At night</option><option>When required</option></select></label><label><span>Duration</span><input name="duration" placeholder="e.g. 5 days"></label><label><span>Start date</span><input type="date" name="start_date" value="{{ today }}"></label><label><span>Status</span><input value="Active" readonly></label></div><label><span>Administration instructions</span><textarea name="instructions" rows="3" placeholder="After food, infusion rate, hold parameters..."></textarea></label><button type="submit" class="submit-btn green"><i class="fas fa-plus"></i> Add medicine order</button></form></article>
+                        <article class="orders-card glass-card"><div class="list-heading"><div><small>Medication administration record</small><h2>Current Medicines</h2></div><span>{{ medications|length }} orders</span></div><div class="order-list">{% for medicine in medications %}<article class="medicine-order"><span class="order-icon"><i class="fas fa-capsules"></i></span><div class="order-main"><header><strong>{{ medicine.medicine_name }}</strong><span class="order-status">{{ medicine.status }}</span></header><p><b>{{ medicine.dose }}</b> · {{ medicine.route }} · {{ medicine.frequency }}</p><small>Started {{ format_date_display(medicine.start_date) }}{% if medicine.duration %} · {{ medicine.duration }}{% endif %}</small>{% if medicine.instructions %}<div class="instruction"><i class="fas fa-circle-info"></i>{{ medicine.instructions }}</div>{% endif %}<footer>Ordered by {{ medicine.prescribed_by or 'Clinical staff' }}</footer></div></article>{% else %}<div class="content-empty"><i class="fas fa-pills"></i><h3>No medicine orders</h3><p>Add the first inpatient medicine order.</p></div>{% endfor %}</div></article></div>
+                </div>
+
+                <div class="tab-panel" data-panel="tests">
+                    <div class="split-panel medicine-layout"><article class="clinical-form-card glass-card"><div class="section-heading"><span class="card-icon violet"><i class="fas fa-flask-vial"></i></span><div><small>Diagnostic investigation</small><h2>Order Test</h2><p>Select from the hospital investigation catalog.</p></div></div><form method="POST" action="{{ url_for('add_inpatient_test', admission_id=patient.id) }}" class="clinical-form">{{ csrf_input }}<label><span>Investigation *</span><select name="service_id" required><option value="">Select laboratory or diagnostic test</option>{% for test in tests %}<option value="{{ test[0] }}">{{ test[1] }} · {{ test[2] }}</option>{% endfor %}</select></label><fieldset class="priority-fieldset"><legend>Priority</legend><label><input type="radio" name="priority" value="Routine" checked><span><i class="fas fa-calendar-check"></i><b>Routine</b><small>Standard workflow</small></span></label><label><input type="radio" name="priority" value="Urgent"><span><i class="fas fa-bolt"></i><b>Urgent</b><small>Immediate attention</small></span></label></fieldset><label><span>Clinical indication / note</span><textarea name="clinical_note" rows="4" placeholder="Reason for test, suspected condition or special instruction"></textarea></label><button type="submit" class="submit-btn violet"><i class="fas fa-paper-plane"></i> Place investigation order</button></form></article>
+                        <article class="orders-card glass-card"><div class="list-heading"><div><small>Investigation tracking</small><h2>Test Orders</h2></div><span>{{ test_orders|length }} orders</span></div><div class="order-list">{% for test in test_orders %}<article class="test-order {{ 'urgent' if test.priority == 'Urgent' else '' }}"><span class="order-icon"><i class="fas fa-vial"></i></span><div class="order-main"><header><strong>{{ test.test_name }}</strong><span class="priority {{ test.priority|lower }}">{{ test.priority }}</span></header><p>{{ test.category }}</p>{% if test.clinical_note %}<div class="instruction"><i class="fas fa-notes-medical"></i>{{ test.clinical_note }}</div>{% endif %}<footer><span>{{ test.status }}</span> · Ordered by {{ test.ordered_by or 'Clinical staff' }} · {{ format_date_display(test.ordered_at) }}</footer></div></article>{% else %}<div class="content-empty"><i class="fas fa-vial"></i><h3>No investigation orders</h3><p>Ordered tests will be tracked here.</p></div>{% endfor %}</div></article></div>
+                </div>
+                {% else %}
+                <article class="workspace-empty glass-card"><span><i class="fas fa-hospital-user"></i></span><h2>No active inpatient selected</h2><p>Admit a patient first or select an active patient from the census.</p><a href="{{ url_for('admissions') }}" class="primary-action"><i class="fas fa-plus"></i> Open Patient Admission</a></article>
+                {% endif %}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer"><span>AL-JUMIRA HOSPITAL</span><span>Secure Inpatient Clinical Record · <b id="footerYear"></b></span></footer>
+    <script>
+        const search=document.getElementById('patientSearch'),cards=[...document.querySelectorAll('.patient-card')],searchEmpty=document.getElementById('searchEmpty');
+        function filterPatients(){if(!search)return;const term=search.value.trim().toLowerCase();let visible=0;cards.forEach(card=>{const show=card.dataset.search.toLowerCase().includes(term);card.hidden=!show;if(show)visible++});if(searchEmpty)searchEmpty.hidden=visible!==0||cards.length===0}
+        if(search){search.addEventListener('input',filterPatients);document.getElementById('clearPatientSearch').addEventListener('click',()=>{search.value='';filterPatients();search.focus()})}
+        const tabButtons=[...document.querySelectorAll('[data-tab]')],panels=[...document.querySelectorAll('[data-panel]')];function openTab(name){tabButtons.forEach(btn=>btn.classList.toggle('active',btn.dataset.tab===name));panels.forEach(panel=>panel.classList.toggle('active',panel.dataset.panel===name));if(name!=='overview')history.replaceState(null,'',`#${name}`)}
+        tabButtons.forEach(btn=>btn.addEventListener('click',()=>openTab(btn.dataset.tab)));document.querySelectorAll('[data-open-tab]').forEach(btn=>btn.addEventListener('click',()=>{openTab(btn.dataset.openTab);document.querySelector('.workspace-tabs').scrollIntoView({behavior:'smooth',block:'start'})}));if(location.hash&&document.querySelector(`[data-tab="${location.hash.slice(1)}"]`))openTab(location.hash.slice(1));
+        document.querySelectorAll('.toast button').forEach(btn=>btn.addEventListener('click',()=>btn.parentElement.remove()));document.getElementById('footerYear').textContent=new Date().getFullYear();
+    </script>
+</body>
+</html>
