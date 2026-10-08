@@ -1,9 +1,12 @@
 .env
 .venv/
+venv/
 .venv-*/
 __pycache__/
 *.py[cod]
 dev.sqlite3
+*.dump
+.railway/
 staticfiles/
 assets/advertisements/*
 !assets/advertisements/.gitkeep

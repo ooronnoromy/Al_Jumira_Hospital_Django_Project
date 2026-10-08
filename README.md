@@ -62,9 +62,15 @@ python manage.py collectstatic --noinput
 
 ## 6. Run the application
 
+For Railway deployment, see [RAILWAY.md](RAILWAY.md).
+
 ```bash
 python manage.py runserver
 ```
+
+`manage.py` automatically uses `.venv` or `venv` when invoked with system
+Python. An already activated virtual environment is respected. Database
+credentials must be configured in `.env`; use `.env.example` as the template.
 
 On Windows, the recommended launcher always uses the project's virtual
 environment, verifies PostgreSQL, applies pending migrations, and starts the

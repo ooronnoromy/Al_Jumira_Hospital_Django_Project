@@ -14,6 +14,7 @@ from django.db import connection, transaction
 from django.db import Error as DjangoDBError
 from django.db import IntegrityError, OperationalError
 from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http.response import HttpResponseBase
 from django.shortcuts import redirect as django_redirect, render as django_render
 from django.urls import NoReverseMatch, reverse
 from django.utils._os import safe_join
@@ -337,7 +338,7 @@ def normalize_response(result):
             result, status = result
         elif len(result) == 3:
             result, status, headers = result
-    if isinstance(result, HttpResponse):
+    if isinstance(result, HttpResponseBase):
         response = result
         if status is not None:
             response.status_code = int(status)

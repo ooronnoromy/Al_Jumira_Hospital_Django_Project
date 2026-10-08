@@ -682,6 +682,8 @@ def logout():
 
 # Route to serve static assets (CSS, JS, images, etc.)
 def assets(filename):
+    if filename.startswith('advertisements/'):
+        return send_from_directory(settings.ADVERTISEMENT_ROOT, filename[len('advertisements/'):])
     return send_from_directory('assets', filename)
 
 def admin_portal():
@@ -6264,7 +6266,7 @@ def patients_serial():
     )
 
 
-ADVERTISEMENT_DIR = os.path.join(settings.BASE_DIR, 'assets', 'advertisements')
+ADVERTISEMENT_DIR = str(settings.ADVERTISEMENT_ROOT)
 ADVERTISEMENT_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 ADVERTISEMENT_VIDEO_EXTENSIONS = {'.mp4', '.webm', '.ogg'}
 

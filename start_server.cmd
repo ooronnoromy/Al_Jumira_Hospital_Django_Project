@@ -3,6 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 set "PROJECT_PYTHON=%CD%\.venv\Scripts\python.exe"
+if not exist "%PROJECT_PYTHON%" set "PROJECT_PYTHON=%CD%\venv\Scripts\python.exe"
 
 rem Find the active adapter's IPv4 address so Django accepts requests from
 rem other devices even if the router assigns this computer a new address.
